@@ -97,12 +97,17 @@ describe('Lottery', () => {
         });
 
         const initialBalance = await web3.eth.getBalance(accounts[0]); // balance after entering lottery
-
         await lottery.methods.pickWinner().send({ from: accounts[0] });
-
         const finalBalance = await web3.eth.getBalance(accounts[0]); // balance after winning lottery as only entrant
-
         const difference = finalBalance - initialBalance;
+
         assert(difference > web3.utils.toWei('1.8', 'ether')); // confirm the balnances are about 2 eth different
     });
+
+    it('players array is emptied', async () => {
+        const players = await lottery.methods.getPlayers().call({ // list the first address into the lottery
+            from: accounts[0],
+        });
+
+    })
 });
