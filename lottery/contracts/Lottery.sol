@@ -10,7 +10,7 @@ contract Lottery {
     
     function enter() public payable { // payable indicates that they are allowed to send money
         require(msg.value > 10000000000000000); // 0.01 ether
-        require(msg.sender != manager);
+        // require(msg.sender != manager); // would prevent the manager from entering the lottery (not in lesson)
         
         players.push(msg.sender);
     }
