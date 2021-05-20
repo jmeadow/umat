@@ -4,14 +4,15 @@ class SearchBar extends Component { // define a new class called "SearchBar" and
     constructor(props) {
         super(props); // super() refers to a parent method of the Component class
 
-        this.state = { term: '' }; 
+        this.state = { term: '' }; // when it renders, the initial term is set to an empty string
     }
 
     render() {
         return (
             <div>
-                <input onChange={event => this.setState({ term: event.target.value })} />
-                Value of the input: {this.state.term}
+                <input
+                    value={this.state.term} // when the object rerenders, this sets its new state to the term until it is updated on the next line
+                    onChange={event => this.setState({ term: event.target.value })} /> 
             </div>
         );
     }
