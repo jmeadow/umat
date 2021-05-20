@@ -1,7 +1,7 @@
 pragma solidity ^0.4.17;
 
 contract Lottery {
-    address public manager;
+    address public manager; // this can later be called with "await lottery.methods.manager().call();"
     address[] public players; // creates dynamic array that can only contain addresses
     
     function Lottery() public {
@@ -33,4 +33,10 @@ contract Lottery {
     function getPlayers() public view returns (address[]) {
         return players;
     }
+
+    function getManager() public view returns (address) {
+        return manager;
+    }
+
+
 }

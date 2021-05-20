@@ -19,25 +19,45 @@ beforeEach(async () => {
         });
 });
 
-
 describe('Lottery', () => {
     it('addresses exist', async () => {
         assert.ok(lottery.options.address); // confirms that an address exists
     });
 
+
+    it('manager is accounts[0]', async () => {
+        const manager = await lottery.methods.getManager().call({
+            from: accounts[0],
+        });
+        console.log('manager address: ' + manager);
+        console.log('accounts[0] address: ' + accounts[0]);
+        assert.equal(accounts[0], manager);
+    });
+
+
+    it('manager is not accounts[1]', async () => {
+        const manager = await lottery.methods.getManager().call({
+            from: accounts[1],
+        });
+        assert.notEqual(accounts[1], manager);
+    });
+
+
     it('allows one account to enter', async () => { // tests whether an account can successfully run the "enter" function
         await lottery.methods.enter().send({
-            from: accounts[0]
+            from: accounts[1]
             ,value: web3.utils.toWei('0.02', 'ether')
         });
 
         const players = await lottery.methods.getPlayers().call({ // list the first address into the lottery
-            from: accounts[0],
+            from: accounts[1],
         });
 
-        assert.equal(accounts[0], players[0]);
+        assert.equal(accounts[1], players[0]);
         assert.equal(1, players.length);
     });
+
+
 
     it('allows multiple account to enter', async () => { // tests whether an account can successfully run the "enter" function
         await lottery.methods.enter().send({
@@ -65,6 +85,7 @@ describe('Lottery', () => {
         assert.equal(3, players.length);
     });
 
+
     it('requires a minimum amount of ether', async () => {
         try { // javascript attempts to run the try statement, if there is no error it will continue along
             await lottery.methods.enter().send({
@@ -78,11 +99,30 @@ describe('Lottery', () => {
     });
 
 
-    it('only manager can pick a winner', async () => {
+    it('mmanager can pick a winner', async () => {
+        await lottery.methods.enter().send({
+            from: accounts[1]
+            ,value: web3.utils.toWei('2', 'ether')
+        });
         try {
             await lottery.methods.pickWinner().send({
                 from: accounts[0]
-                ,value: 1000000
+            });
+            assert(true); // this should fail – why isn't it?
+        } catch (err) {
+            assert(false)
+        }
+    });
+
+
+    it('non-managers cannot pick a winner', async () => {
+        await lottery.methods.enter().send({
+            from: accounts[1]
+            ,value: web3.utils.toWei('2', 'ether')
+        });
+        try {
+            await lottery.methods.pickWinner().send({
+                from: accounts[1]
             });
             assert(false); // this should fail – why isn't it?
         } catch (err) {
@@ -90,24 +130,26 @@ describe('Lottery', () => {
         }
     });
 
+
     it('sends money to winner and resets players array', async () => {
         await lottery.methods.enter().send({
-            from: accounts[0]
+            from: accounts[1]
             ,value: web3.utils.toWei('2', 'ether')
         });
 
-        const initialBalance = await web3.eth.getBalance(accounts[0]); // balance after entering lottery
+        const initialBalance = await web3.eth.getBalance(accounts[1]); // balance after entering lottery
         await lottery.methods.pickWinner().send({ from: accounts[0] });
-        const finalBalance = await web3.eth.getBalance(accounts[0]); // balance after winning lottery as only entrant
+        const finalBalance = await web3.eth.getBalance(accounts[1]); // balance after winning lottery as only entrant
         const difference = finalBalance - initialBalance;
 
         assert(difference > web3.utils.toWei('1.8', 'ether')); // confirm the balnances are about 2 eth different
     });
+
 
     it('players array is emptied', async () => {
         const players = await lottery.methods.getPlayers().call({ // list the first address into the lottery
             from: accounts[0],
         });
 
-    })
+    });
 });
