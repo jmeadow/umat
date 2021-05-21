@@ -16,7 +16,7 @@ contract CampaignFactory {
 
 
 contract Campaign {
-    struct Request { // note that this creates a struct definition, and it later needs to be declared as a variable
+    struct Request { // note that this defines a struct definition, and it later needs to be declared as a variable
         string description; // defines new field in the struct and sets its type
         uint value; // how much the donation will be
         address recipient; // who we will send the donation to
