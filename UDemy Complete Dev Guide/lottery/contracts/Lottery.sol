@@ -4,7 +4,8 @@ contract Lottery {
     address public manager; // this can later be called with "await lottery.methods.manager().call();"
     address[] public players; // creates dynamic array that can only contain addresses
     
-    function Lottery() public {
+    // function Lottery() public {
+    constructor() public {
         manager = msg.sender;
     }
     
