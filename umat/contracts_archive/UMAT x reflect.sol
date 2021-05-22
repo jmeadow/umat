@@ -321,7 +321,18 @@ contract UMAT is Context, IERC20, IERC20Metadata {
 /* attempting to implement transfer fees  */
 ////////////////////////////////////////////
  
- 
+ // new variables for code taken from reflect.sol token
+
+
+    mapping (address => mapping (address => uint256)) private _allowances;
+    mapping (address => uint256) private _balances;
+    uint256 private constant MAX = ~uint256(0);
+    uint256 private constant _tTotal = _totalSupply;
+    uint256 private _rTotal = (MAX - (MAX % _tTotal));
+    uint256 private _tFeeTotal;
+    mapping (address => uint256) private _rOwned;
+    mapping (address => uint256) private _tOwned;
+
 ////////////////////////////////////////////
 ////////////////////////////////////////////
 ////////////////////////////////////////////
@@ -517,53 +528,128 @@ contract UMAT is Context, IERC20, IERC20Metadata {
 /* attempting to implement transfer fees  */
 ////////////////////////////////////////////
 
-/* notes on functions taken from froge.sol token
 
-high level tokoen definition: 
-0.1% to charity wallet , 1.0% reflection, 1.0% to dev wallet
+/* notes on functions taken from reflect.sol token
+
+high level token definition: 
+RFI works by applying a 1% fee to each transaction and instantly splitting that fee among all holders of the token. Users can stake flow protocol to earn RFI.
 
 what I need to do:
- - simplify to exclude everything besides single wallet transfer fee
+ - alter the reflect values to send to a static address (aka aid wallet)
  - integrate into the existing _transfer function
 
+
+undeclared variables in zeppelin/UMAT version:
+_rOwned
+_rTotal
+_tFeeTotal
+
+// notes on their syntax
+_t indicates token-related variables
+_r indicates reflection-related variables?
+
+
 // defining specific variables
+tAmount: the amount the sender transfers before any fees are applied
+tFee: the fee deducted from tAmount
+tTransferAmount: the amount transferred after fees are applied
+rAmount: the gross reflection amount
+rFee: the fee charged to reflections
+rTransferAmount: the amount reflected after fees are applied
 
 // function orders
-1. frogeTransfer: initiates transfer
-2. _getUValues: deducts charity/dev fees and calculates net transfer amount
+1. _transferStandard: primary function that intakes gross amount and conducts fees/reflection/net transfer
+2. _getValues: calculates fee and reflection amounts
+    1. _getTvalues: splits tAmount into tFee and tTransferAmount
+    2. _getRate: returns rSupply/tSupply (?)
+        1. _getCurrentSupply: 
+    3. _getRValues: calculates the amount to be reflected
+3. _reflectFee: 
+
+
 */
 
+    // primary function that intakes gross amount and conducts fees/reflection/net transfer
+    function _transferStandard(
+        address sender
+        ,address recipient
+        ,uint256 tAmount
+    ) private {(
+            uint256 rAmount
+            ,uint256 rTransferAmount
+            ,uint256 rFee
+            ,uint256 tTransferAmount // amount actually transferred to recipient
+            ,uint256 tFee // fees deducted from transfer
+        ) = _getValues(tAmount); // gross transfer amount
+        _rOwned[sender] = _rOwned[sender].sub(rAmount);
+        _rOwned[recipient] = _rOwned[recipient].add(rTransferAmount);       
+        _reflectFee(rFee, tFee);
 
-    // distributes tokens to 3 locations; renamed from transfer() in their code
-    function frogeTransfer(
-        address recipient
-        ,uint256 amount
-    ) public override returns (bool) {(
-        uint256 _amount
-        ,uint256 _boost
-        ,uint256 _dev
-        ) = _getUValues(amount);
-
-        // sends money to recipient
-        _transfer(_msgSender(), recipient, _amount);
-        
-        // sends money to charity wallet
-        _transfer(_msgSender(), _cBoost, _boost);
-        
-        // sends money to dev wallet
-        _transfer(_msgSender(), _cDev, _dev);
-        return true;
+        // the recipient actually receives tTransferAmount
+        emit Transfer(sender, recipient, tTransferAmount);
     }
 
-    // calculates the fees applied to the gross transfer
-    function _getUValues(uint256 amount) private pure returns (uint256, uint256, uint256) {
-        uint256 _boost = amount.div(1000); // 0.1% for charity
-        uint256 _dev = amount.div(100); // 1.0% for devs
-        uint256 _amount = amount.sub(_boost).sub(_dev); // remainder for recipient
-        return (_amount, _boost, _dev);
+    // calculates fee and reflection amounts
+    function _getValues(uint256 tAmount) private view returns (uint256, uint256, uint256, uint256, uint256) {
+        // calculates token transfer amount and token fees
+        (uint256 tTransferAmount, uint256 tFee) = _getTValues(tAmount);
+        
+        // calculates the reflection rate
+        uint256 currentRate =  _getRate(); 
+        
+        // determines... reflection rate??
+        (uint256 rAmount, uint256 rTransferAmount, uint256 rFee) = _getRValues(tAmount, tFee, currentRate);
+        return (rAmount, rTransferAmount, rFee, tTransferAmount, tFee);
     }
 
+    function _reflectFee(uint256 rFee, uint256 tFee) private {
+        _rTotal = _rTotal.sub(rFee);
+        _tFeeTotal = _tFeeTotal.add(tFee);
+    }
 
+    // splits tAmount into tFee and tTransferAmount
+    function _getTValues(uint256 tAmount) private pure returns (uint256, uint256) {
+        // it charges a 1% transaction fee (aka amount/100)
+        uint256 tFee = tAmount.div(100); // 
+
+        // calculates the actually amount the person receives (tTransferAmount) via tAmount - tFee 
+        uint256 tTransferAmount = tAmount.sub(tFee);
+        return (tTransferAmount, tFee);
+    }
+
+    // calculates the reflection amounts based on the transaction amount+fee and the reflection rate 
+    function _getRValues(
+        uint256 tAmount
+        ,uint256 tFee
+        ,uint256 currentRate
+    ) private pure returns (uint256, uint256, uint256) {
+        uint256 rAmount = tAmount.mul(currentRate);
+        uint256 rFee = tFee.mul(currentRate);
+        uint256 rTransferAmount = rAmount.sub(rFee);
+        return (rAmount, rTransferAmount, rFee);
+    }
+
+    // calculates the amount of reclection tokens to be allocated?
+    function _getRate() private view returns(uint256) {
+        (uint256 rSupply, uint256 tSupply) = _getCurrentSupply();
+        return rSupply.div(tSupply);
+    }
+
+    // ??? very complicated I don't get it
+    function _getCurrentSupply() private view returns(uint256, uint256) {
+        uint256 rSupply = _rTotal;
+        uint256 tSupply = _tTotal;
+
+        // does something related to excluded accounts (excluded from fee? reflection?)
+        // runs a for loop for each accounts in the _excluded array
+        for (uint256 i = 0; i < _excluded.length; i++) {
+            if (_rOwned[_excluded[i]] > rSupply || _tOwned[_excluded[i]] > tSupply) return (_rTotal, _tTotal);
+            rSupply = rSupply.sub(_rOwned[_excluded[i]]);
+            tSupply = tSupply.sub(_tOwned[_excluded[i]]);
+        }
+        if (rSupply < _rTotal.div(_tTotal)) return (_rTotal, _tTotal);
+        return (rSupply, tSupply);
+    }
 
 ////////////////////////////////////////////
 ////////////////////////////////////////////
