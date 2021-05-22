@@ -316,6 +316,8 @@ contract UMAT is Context, IERC20, IERC20Metadata {
     string private _name;
     string private _symbol;
     uint public _totalSupply;
+    mapping (address => mapping (address => uint256)) private _allowances;
+    mapping (address => uint256) private _balances;
 
 ////////////////////////////////////////////
 /* attempting to implement transfer fees  */
@@ -532,7 +534,7 @@ what I need to do:
 1. frogeTransfer: initiates transfer
 2. _getUValues: deducts charity/dev fees and calculates net transfer amount
 */
-
+/*
 
     // distributes tokens to 3 locations; renamed from transfer() in their code
     function frogeTransfer(
@@ -563,7 +565,7 @@ what I need to do:
         return (_amount, _boost, _dev);
     }
 
-
+*/
 
 ////////////////////////////////////////////
 ////////////////////////////////////////////

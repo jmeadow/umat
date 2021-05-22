@@ -316,6 +316,9 @@ contract UMAT is Context, IERC20, IERC20Metadata {
     string private _name;
     string private _symbol;
     uint public _totalSupply;
+    mapping (address => mapping (address => uint256)) private _allowances;
+    mapping (address => uint256) private _balances;
+
 
 ////////////////////////////////////////////
 /* attempting to implement transfer fees  */
@@ -324,8 +327,6 @@ contract UMAT is Context, IERC20, IERC20Metadata {
  // new variables for code taken from reflect.sol token
 
 
-    mapping (address => mapping (address => uint256)) private _allowances;
-    mapping (address => uint256) private _balances;
     uint256 private constant MAX = ~uint256(0);
     uint256 private constant _tTotal = _totalSupply;
     uint256 private _rTotal = (MAX - (MAX % _tTotal));
