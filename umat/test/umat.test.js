@@ -17,7 +17,7 @@ describe('UMAT', () => {
         [owner, aidWallet, addr1, addr2, addr3, _] = await ethers.getSigners();
 
         UMAT = await ethers.getContractFactory('UMAT');
-        umat = await UMAT.deploy();
+        umat = await UMAT.deploy(aidWallet.address);
         
         // accounts = await web3.eth.getAccounts();
     });
@@ -44,7 +44,6 @@ describe('UMAT', () => {
 
             assert(totalSupply > 0);
             assert.equal(totalSupply, ownerBalance);
-            console.log(totalSupply);
             // assert(totalSupply > totalSupply - 1); // I can't get math to work for numbers this large
             assert(totalEtherSupply > totalEtherSupply - 1); // confirm we can do math functions on ether at least
 
@@ -67,7 +66,7 @@ describe('UMAT', () => {
 
 
     describe('Basic token transaction tests', () => {
-        it('owner can transfer 100 wei', async () => {
+        it('owner can transfer 100 wei and 5 goes to aid wallet', async () => {
             
             ownerInitialBalance = await umat.connect(owner).balanceOf(owner.address);
             ownerInitialBalance = web3.utils.hexToNumberString(ownerInitialBalance);
@@ -77,10 +76,15 @@ describe('UMAT', () => {
             addr1Balance = await umat.connect(owner).balanceOf(addr1.address)
             addr1Balance = web3.utils.hexToNumberString(addr1Balance);
 
+            aidWalletBalance = await umat.connect(owner).balanceOf(aidWallet.address)
+            aidWalletBalance = web3.utils.hexToNumberString(aidWalletBalance);
+
             ownerNewBalance = await umat.connect(owner).balanceOf(owner.address)
             ownerNewBalance = web3.utils.hexToNumberString(ownerNewBalance);
 
-            assert.equal(100, addr1Balance);
+            assert.equal
+            assert.equal(95, addr1Balance);
+            assert.equal(5, aidWalletBalance);
             assert.equal(ownerInitialBalance - 100, ownerNewBalance);
 
         });

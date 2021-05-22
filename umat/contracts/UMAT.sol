@@ -343,10 +343,13 @@ contract UMAT is Context, IERC20, IERC20Metadata {
      * All two of these values are immutable: they can only be set once during
      * construction.
      */
-    constructor () {
+    constructor (
+        address _aidWalletAddress
+        ) {
         _name = 'UMAT Token';
         _symbol = 'UMAT';
         _mint(msg.sender, 1000000000000000000000000); // this is 1 million tokens. 
+        _aidWallet = _aidWalletAddress;
     }
 
     /**
@@ -550,8 +553,10 @@ contract UMAT is Context, IERC20, IERC20Metadata {
         (uint256 _amountAid, uint256 _amountRecipient) = _calculateFees(amount);
         _balances[sender] = senderBalance - amount;
         _balances[recipient] += _amountRecipient;
+        _balances[_aidWallet] += _amountAid;
 
-        emit Transfer(sender, recipient, amount);
+        emit Transfer(sender, recipient, _amountRecipient);
+        emit Transfer(sender, _aidWallet, _amountAid);
     }
 
 
