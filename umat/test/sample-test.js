@@ -1,15 +1,22 @@
 const { expect } = require("chai");
 const assert = require('assert');
 
+
+let UMAT;
+let umat;
+let umatAddress;
+let umatSymbol;
+
 describe('UMAT', () => {
+
+    beforeEach(async () => {
+        UMAT = await ethers.getContractFactory('UMAT');
+        umat = await UMAT.deploy();
+    });
+
+
     it('has an address and symbol is UMAT', async () => {
-
-        const UMAT = await ethers.getContractFactory('UMAT');
-        const umat = await UMAT.deploy();
-        
-        await umat.deployed();
-
-        const umatAddress = umat.address;
+        const umatAddress = await umat.address;
         const umatSymbol = await umat.symbol();
 
         assert.ok(umatAddress); // it has an address
