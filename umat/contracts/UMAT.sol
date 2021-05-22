@@ -157,16 +157,17 @@ contract UMAT is Context, IERC20, IERC20Metadata {
 
     mapping (address => mapping (address => uint256)) private _allowances;
 
-    uint256 private _totalSupply;
-
     string private _name;
     string private _symbol;
+    uint public _totalSupply;
+
 
     /**
      * @dev Sets the values for {name} and {symbol}.
      *
      * The defaut value of {decimals} is 18. To select a different value for
      * {decimals} you should overload it.
+     * 18 0s for copying as decimals: 000000000000000000
      *
      * All two of these values are immutable: they can only be set once during
      * construction.
@@ -174,6 +175,7 @@ contract UMAT is Context, IERC20, IERC20Metadata {
     constructor () {
         _name = 'UMAT Token';
         _symbol = 'UMAT';
+        _mint(msg.sender, 1000000000000000000000000); // this is 1 million tokens. 
     }
 
     /**
