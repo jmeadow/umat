@@ -492,41 +492,6 @@ contract UMAT is Context, IERC20, IERC20Metadata {
         return true;
     }
 
-    /**
-     * @dev Moves tokens `amount` from `sender` to `recipient`.
-     *
-     * This is internal function is equivalent to {transfer}, and can be used to
-     * e.g. implement automatic token fees, slashing mechanisms, etc.
-     *
-     * Emits a {Transfer} event.
-     *
-     * Requirements:
-     *
-     * - `sender` cannot be the zero address.
-     * - `recipient` cannot be the zero address.
-     * - `sender` must have a balance of at least `amount`.
-     */
-    // function _transfer(address sender, address recipient, uint256 amount) internal virtual {
-
-    //     // validation checks
-    //     require(sender != address(0), "ERC20: transfer from the zero address");
-    //     require(recipient != address(0), "ERC20: transfer to the zero address");
-    //     uint256 senderBalance = _balances[sender];
-    //     require(senderBalance >= amount, "ERC20: transfer amount exceeds balance");
-        
-
-    //     _balances[sender] = senderBalance - amount;
-    //     _balances[recipient] += amount;
-
-    //     emit Transfer(sender, recipient, amount);
-    // }
-
-
-
-////////////////////////////////////////////
-/* attempting to implement transfer fees  */
-////////////////////////////////////////////
-
 
     /**
      * @dev Moves tokens `amount` from `sender` to `recipient`.
@@ -541,6 +506,11 @@ contract UMAT is Context, IERC20, IERC20Metadata {
      * - `sender` cannot be the zero address.
      * - `recipient` cannot be the zero address.
      * - `sender` must have a balance of at least `amount`.
+     *
+     * @jeremy this has been reconfigured to apply fees as determined by  _calculateFees() 
+     * and deduct them from every _transfer() recipient and instead reallocate to the 
+     * _aidWallet address. 
+     *
      */
     function _transfer(address sender, address recipient, uint256 amount) internal virtual {
         
@@ -560,65 +530,17 @@ contract UMAT is Context, IERC20, IERC20Metadata {
     }
 
 
-    // calculates the fees applied to the gross transfer
+
+    /** 
+    * @jeremy Calculates the fees applied to the gross transfer
+    * 
+    * Currenetly set up to automatically deduct 5% for every transaction
+    */
     function _calculateFees(uint256 amount) private pure returns (uint256, uint256) {
         uint256 _amountAid = amount.div(20); // 5.0% for charity
         uint256 _amountRecipient = amount.sub(_amountAid); // remainder for recipient
         return (_amountAid, _amountRecipient);
     }
-
-/* notes on functions taken from froge.sol token
-
-high level tokoen definition: 
-0.1% to charity wallet , 1.0% reflection, 1.0% to dev wallet
-
-what I need to do:
- - simplify to exclude everything besides single wallet transfer fee
- - integrate into the existing _transfer function
-
-// defining specific variables
-
-// function orders
-1. _frogeTransfer: initiates transfer
-2. _getUValues: deducts charity/dev fees and calculates net transfer amount
-*/
-
-
-    // distributes tokens to 3 locations; renamed from transfer() in their code
-    // function frogeTransfer(
-    //     address recipient
-    //     ,uint256 amount
-    // ) public override returns (bool) {(
-    //     uint256 _amount
-    //     ,uint256 _boost
-    //     ,uint256 _dev
-    //     ) = _getUValues(amount);
-
-    //     // calls _transfer to send money to recipient
-    //     _transfer(_msgSender(), recipient, _amount);
-        
-    //     // calls _transfer to send money to charity wallet
-    //     _transfer(_msgSender(), _cBoost, _boost);
-        
-    //     // calls _transfer to send money to devs
-    //     _transfer(_msgSender(), _cDev, _dev);
-    //     return true;
-    // }
-
-    // // calculates the fees applied to the gross transfer
-    // function _getUValues(uint256 amount) private pure returns (uint256, uint256, uint256) {
-    //     uint256 _boost = amount.div(1000); // 0.1% for charity
-    //     uint256 _dev = amount.div(100); // 1.0% for devs
-    //     uint256 _amount = amount.sub(_boost).sub(_dev); // remainder for recipient
-    //     return (_amount, _boost, _dev);
-    // }
-
-
-
-////////////////////////////////////////////
-////////////////////////////////////////////
-////////////////////////////////////////////
-
 
 
 
