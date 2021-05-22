@@ -319,6 +319,8 @@ contract UMAT is Context, IERC20, IERC20Metadata {
     mapping (address => mapping (address => uint256)) private _allowances;
     mapping (address => uint256) private _balances;
 
+    address public _aidWallet;
+
 ////////////////////////////////////////////
 /* attempting to implement transfer fees  */
 ////////////////////////////////////////////
@@ -501,21 +503,64 @@ contract UMAT is Context, IERC20, IERC20Metadata {
      * - `recipient` cannot be the zero address.
      * - `sender` must have a balance of at least `amount`.
      */
-    function _transfer(address sender, address recipient, uint256 amount) internal virtual {
-        require(sender != address(0), "ERC20: transfer from the zero address");
-        require(recipient != address(0), "ERC20: transfer to the zero address");
+    // function _transfer(address sender, address recipient, uint256 amount) internal virtual {
 
-        uint256 senderBalance = _balances[sender];
-        require(senderBalance >= amount, "ERC20: transfer amount exceeds balance");
-        _balances[sender] = senderBalance - amount;
-        _balances[recipient] += amount;
+    //     // validation checks
+    //     require(sender != address(0), "ERC20: transfer from the zero address");
+    //     require(recipient != address(0), "ERC20: transfer to the zero address");
+    //     uint256 senderBalance = _balances[sender];
+    //     require(senderBalance >= amount, "ERC20: transfer amount exceeds balance");
+        
 
-        emit Transfer(sender, recipient, amount);
-    }
+    //     _balances[sender] = senderBalance - amount;
+    //     _balances[recipient] += amount;
+
+    //     emit Transfer(sender, recipient, amount);
+    // }
+
+
 
 ////////////////////////////////////////////
 /* attempting to implement transfer fees  */
 ////////////////////////////////////////////
+
+
+    /**
+     * @dev Moves tokens `amount` from `sender` to `recipient`.
+     *
+     * This is internal function is equivalent to {transfer}, and can be used to
+     * e.g. implement automatic token fees, slashing mechanisms, etc.
+     *
+     * Emits a {Transfer} event.
+     *
+     * Requirements:
+     *
+     * - `sender` cannot be the zero address.
+     * - `recipient` cannot be the zero address.
+     * - `sender` must have a balance of at least `amount`.
+     */
+    function _transfer(address sender, address recipient, uint256 amount) internal virtual {
+        
+        // validation checks
+        require(sender != address(0), "ERC20: transfer from the zero address");
+        require(recipient != address(0), "ERC20: transfer to the zero address");
+        uint256 senderBalance = _balances[sender];
+        require(senderBalance >= amount, "ERC20: transfer amount exceeds balance");
+
+        (uint256 _amountAid, uint256 _amountRecipient) = _calculateFees(amount);
+        _balances[sender] = senderBalance - amount;
+        _balances[recipient] += _amountRecipient;
+
+        emit Transfer(sender, recipient, amount);
+    }
+
+
+    // calculates the fees applied to the gross transfer
+    function _calculateFees(uint256 amount) private pure returns (uint256, uint256) {
+        uint256 _amountAid = amount.div(20); // 5.0% for charity
+        uint256 _amountRecipient = amount.sub(_amountAid); // remainder for recipient
+        return (_amountAid, _amountRecipient);
+    }
 
 /* notes on functions taken from froge.sol token
 
@@ -529,41 +574,41 @@ what I need to do:
 // defining specific variables
 
 // function orders
-1. frogeTransfer: initiates transfer
+1. _frogeTransfer: initiates transfer
 2. _getUValues: deducts charity/dev fees and calculates net transfer amount
 */
-/*
+
 
     // distributes tokens to 3 locations; renamed from transfer() in their code
-    function frogeTransfer(
-        address recipient
-        ,uint256 amount
-    ) public override returns (bool) {(
-        uint256 _amount
-        ,uint256 _boost
-        ,uint256 _dev
-        ) = _getUValues(amount);
+    // function frogeTransfer(
+    //     address recipient
+    //     ,uint256 amount
+    // ) public override returns (bool) {(
+    //     uint256 _amount
+    //     ,uint256 _boost
+    //     ,uint256 _dev
+    //     ) = _getUValues(amount);
 
-        // sends money to recipient
-        _transfer(_msgSender(), recipient, _amount);
+    //     // calls _transfer to send money to recipient
+    //     _transfer(_msgSender(), recipient, _amount);
         
-        // sends money to charity wallet
-        _transfer(_msgSender(), _cBoost, _boost);
+    //     // calls _transfer to send money to charity wallet
+    //     _transfer(_msgSender(), _cBoost, _boost);
         
-        // sends money to dev wallet
-        _transfer(_msgSender(), _cDev, _dev);
-        return true;
-    }
+    //     // calls _transfer to send money to devs
+    //     _transfer(_msgSender(), _cDev, _dev);
+    //     return true;
+    // }
 
-    // calculates the fees applied to the gross transfer
-    function _getUValues(uint256 amount) private pure returns (uint256, uint256, uint256) {
-        uint256 _boost = amount.div(1000); // 0.1% for charity
-        uint256 _dev = amount.div(100); // 1.0% for devs
-        uint256 _amount = amount.sub(_boost).sub(_dev); // remainder for recipient
-        return (_amount, _boost, _dev);
-    }
+    // // calculates the fees applied to the gross transfer
+    // function _getUValues(uint256 amount) private pure returns (uint256, uint256, uint256) {
+    //     uint256 _boost = amount.div(1000); // 0.1% for charity
+    //     uint256 _dev = amount.div(100); // 1.0% for devs
+    //     uint256 _amount = amount.sub(_boost).sub(_dev); // remainder for recipient
+    //     return (_amount, _boost, _dev);
+    // }
 
-*/
+
 
 ////////////////////////////////////////////
 ////////////////////////////////////////////

@@ -44,6 +44,7 @@ describe('UMAT', () => {
 
             assert(totalSupply > 0);
             assert.equal(totalSupply, ownerBalance);
+            console.log(totalSupply);
             // assert(totalSupply > totalSupply - 1); // I can't get math to work for numbers this large
             assert(totalEtherSupply > totalEtherSupply - 1); // confirm we can do math functions on ether at least
 
