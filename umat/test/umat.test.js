@@ -82,7 +82,6 @@ describe('UMAT', () => {
             ownerNewBalance = await umat.connect(owner).balanceOf(owner.address)
             ownerNewBalance = web3.utils.hexToNumberString(ownerNewBalance);
 
-            assert.equal
             assert.equal(95, addr1Balance);
             assert.equal(5, aidWalletBalance);
             assert.equal(ownerInitialBalance - 100, ownerNewBalance);

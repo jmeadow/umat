@@ -507,7 +507,7 @@ contract UMAT is Context, IERC20, IERC20Metadata {
      * - `recipient` cannot be the zero address.
      * - `sender` must have a balance of at least `amount`.
      *
-     * @jeremy this has been reconfigured to apply fees as determined by  _calculateFees() 
+     * jeremy: this has been reconfigured to apply fees as determined by  _calculateFees() 
      * and deduct them from every _transfer() recipient and instead reallocate to the 
      * _aidWallet address. 
      *
@@ -532,7 +532,7 @@ contract UMAT is Context, IERC20, IERC20Metadata {
 
 
     /** 
-    * @jeremy Calculates the fees applied to the gross transfer
+    * jeremy: Calculates the fees applied to the gross transfer
     * 
     * Currenetly set up to automatically deduct 5% for every transaction
     */
