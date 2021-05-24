@@ -1,6 +1,12 @@
 const { expect } = require("chai");
 const assert = require('assert');
 
+
+
+
+
+
+
 let UMAT;
 let umat;
 let owner;
@@ -8,7 +14,6 @@ let aidWallet;
 let addr1;
 let addr2;
 let addr3;
-let accounts;
 let totalSupply;
 
 describe('UMAT', () => {
@@ -19,7 +24,6 @@ describe('UMAT', () => {
         UMAT = await ethers.getContractFactory('UMAT');
         umat = await UMAT.deploy(aidWallet.address);
         
-        // accounts = await web3.eth.getAccounts();
     });
 
     describe('Deployment tests', () => {
@@ -32,26 +36,26 @@ describe('UMAT', () => {
 
         });
 
-        it('accounts[0] has the total supply, also we can do math', async () => {
+        it('owner has the total umat supply, also we can do math', async () => {
 
             totalSupply = await umat.totalSupply();
             totalSupply = web3.utils.hexToNumberString(totalSupply); // I don't know how to turn the warning off but I'm ignoring it for now
-            totalEtherSupply = web3.utils.fromWei(totalSupply, 'ether'); //confirm that we use Wei utils 
+            totalSupply = web3.utils.fromWei(totalSupply, 'ether');
 
             ownerBalance = await umat.connect(owner).balanceOf(owner.address);
             ownerBalance = web3.utils.hexToNumberString(ownerBalance);
+            ownerBalance = web3.utils.fromWei(ownerBalance, 'ether');
+
+
+            // // putting logs to help confirm things are working right
+            // console.log('UMAT address: '+ await umat.address);
+            // console.log('owner address: '+ await owner.address);
+            // console.log('total UMAT: '+totalSupply);
 
 
             assert(totalSupply > 0);
             assert.equal(totalSupply, ownerBalance);
             // assert(totalSupply > totalSupply - 1); // I can't get math to work for numbers this large
-            assert(totalEtherSupply > totalEtherSupply - 1); // confirm we can do math functions on ether at least
-
-            // // putting logs to help confirm things are working right
-            // console.log('UMAT address: '+ await umat.address);
-            // console.log('owner address: '+ await owner.address);
-            // console.log('total UMAT wei: '+totalSupply);
-            // console.log('total UMAT: '+totalEtherSupply);
 
         });
 
@@ -61,12 +65,28 @@ describe('UMAT', () => {
             assert.ok(addr2.address);
             assert.ok(addr3.address);
             assert.notEqual(owner.address, addr1.address, addr2.address, addr3.address);
-        })
+        });
+
+
+        it('address 1+2+3 accounts have 10k ether ', async () => {
+            // // (owner has deployment gas deducted)
+            
+            addr1Balance = await web3.eth.getBalance(addr1.address);
+            addr1Balance = web3.utils.fromWei(addr1Balance, 'ether');
+
+            addr2Balance = await web3.eth.getBalance(addr2.address);
+            addr2Balance = web3.utils.fromWei(addr2Balance, 'ether');
+
+            addr3Balance = await web3.eth.getBalance(addr3.address);
+            addr3Balance = web3.utils.fromWei(addr3Balance, 'ether');
+
+            assert.equal(10000, addr1Balance, addr2Balance, addr3Balance);
+        });
     });
 
 
     describe('Basic token transaction tests', () => {
-        it('owner can transfer 100 wei and 5 goes to aid wallet', async () => {
+        it('owner can transfer 100 UMAT wei and 5 goes to aid wallet', async () => {
             
             ownerInitialBalance = await umat.connect(owner).balanceOf(owner.address);
             ownerInitialBalance = web3.utils.hexToNumberString(ownerInitialBalance);
@@ -88,6 +108,12 @@ describe('UMAT', () => {
 
         });
     });
+
+    // describe('Uniswap implementation tests', () => {
+    //     it('generic code testing', async () => {
+    //         const uniswapV2Factory = await UniswapV2Factory.deploy(signers[0].address);
+    //     });
+    // });
 });
 
 
