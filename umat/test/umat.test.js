@@ -1,12 +1,6 @@
 const { expect } = require("chai");
 const assert = require('assert');
 
-
-
-
-
-
-
 let UMAT;
 let umat;
 let owner;
@@ -36,7 +30,7 @@ describe('UMAT', () => {
 
         });
 
-        it('owner has the total umat supply, also we can do math', async () => {
+        it('owner has the total umat supply and a balance > 0', async () => {
 
             totalSupply = await umat.totalSupply();
             totalSupply = web3.utils.hexToNumberString(totalSupply); // I don't know how to turn the warning off but I'm ignoring it for now
@@ -45,18 +39,19 @@ describe('UMAT', () => {
             ownerBalance = await umat.connect(owner).balanceOf(owner.address);
             ownerBalance = web3.utils.hexToNumberString(ownerBalance);
             ownerBalance = web3.utils.fromWei(ownerBalance, 'ether');
-
+            
 
             // // putting logs to help confirm things are working right
             // console.log('UMAT address: '+ await umat.address);
             // console.log('owner address: '+ await owner.address);
             // console.log('total UMAT: '+totalSupply);
+            // console.log(totalSupply);
+            // console.log(ownerBalance);
 
-
-            assert(totalSupply > 0);
+            
             assert.equal(totalSupply, ownerBalance);
-            // assert(totalSupply > totalSupply - 1); // I can't get math to work for numbers this large
-
+            assert(ownerBalance > 0);
+            
         });
 
         it('there are 4 different accounts with addresses', () => {
@@ -86,7 +81,7 @@ describe('UMAT', () => {
 
 
     describe('Basic token transaction tests', () => {
-        it('owner can transfer 100 UMAT wei and 5 goes to aid wallet', async () => {
+        it('owner can transfer 100 UMAT wei', async () => {
             
             ownerInitialBalance = await umat.connect(owner).balanceOf(owner.address);
             ownerInitialBalance = web3.utils.hexToNumberString(ownerInitialBalance);
@@ -101,10 +96,11 @@ describe('UMAT', () => {
 
             ownerNewBalance = await umat.connect(owner).balanceOf(owner.address)
             ownerNewBalance = web3.utils.hexToNumberString(ownerNewBalance);
-
+            // console.log(ownerNewBalance);
             assert.equal(95, addr1Balance);
             assert.equal(5, aidWalletBalance);
             assert.equal(ownerInitialBalance - 100, ownerNewBalance);
+            // assert(true);
 
         });
     });
