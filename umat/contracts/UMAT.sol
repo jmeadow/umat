@@ -791,8 +791,6 @@ contract UMAT is Context, IERC20, IERC20Metadata, Ownable {
     using SafeMath for uint256;
     using Address for address;
 
-    // IUniswapV2Router02 public immutable uniswapV2Router;
-    // address public immutable uniswapV2Pair;
     address public _burnPool = 0x0000000000000000000000000000000000000000;
 
 
@@ -802,7 +800,8 @@ contract UMAT is Context, IERC20, IERC20Metadata, Ownable {
     mapping (address => mapping (address => uint256)) private _allowances;
     mapping (address => uint256) private _balances;
 
-    address public _aidWallet;
+    address public constant _aidWallet = 0xcF54c935AEB1f8451177f4D756F0B677Fab439e8;
+    address public constant _mainWallet = 0x99bEbEFF505b1458F4D03A370ef411d566b220F2;
 
     // modifier lockTheSwap {
     //     inSwapAndLiquify = true;
@@ -812,13 +811,13 @@ contract UMAT is Context, IERC20, IERC20Metadata, Ownable {
 
 
     constructor (
-        address _aidWalletAddress
+        // address _aidWalletAddress
         ) {
             _name = 'UMAT Token';
             _symbol = 'UMAT';
             // mint tokens which will initially belong to deployer
-            _mint(msg.sender, 5000000 * 10**18); // this is 5 million tokens + 18 decimals 
-            _aidWallet = _aidWalletAddress;
+            _mint(_mainWallet, 5000000 * 10**18); // this is 5 million tokens + 18 decimals 
+            // _aidWallet = _aidWalletAddress;
     }
 
 
