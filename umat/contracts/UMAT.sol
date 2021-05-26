@@ -791,33 +791,41 @@ contract UMAT is Context, IERC20, IERC20Metadata, Ownable {
     using SafeMath for uint256;
     using Address for address;
 
-    address public _burnPool = 0x0000000000000000000000000000000000000000;
-
-
+    // standard declarations
     string private _name;
     string private _symbol;
-    uint public _totalSupply;
+    uint public _tTotal;
+    uint private _mintAmount = 5000000 * 10**18; // this is 5 million tokens + 18 decimals 
     mapping (address => mapping (address => uint256)) private _allowances;
-    mapping (address => uint256) private _balances;
 
-    address public constant _aidWallet = 0xcF54c935AEB1f8451177f4D756F0B677Fab439e8;
-    address public constant _mainWallet = 0x99bEbEFF505b1458F4D03A370ef411d566b220F2;
+    // umat variables
+    address public _aidWallet; 
+    bool private _aidTransfer;
+    mapping (address => bool) public _isLiquidityAddress;
 
-    // modifier lockTheSwap {
-    //     inSwapAndLiquify = true;
-    //     _;
-    //     inSwapAndLiquify = false;
-    // }
+    // reflection variables
+    mapping (address => uint256) private _rOwned;
+    mapping (address => uint256) private _tOwned;
+    mapping (address => bool) public _isExcluded; // mapping of addresses excluded from fees
+    address[] private _excluded; // list of excluded addresses
+    uint256 private constant MAX = ~uint256(0); // the largest possible number?
+    // uint256 private constant _tTotal = 10**6 * 10**18; // total supply 
+    uint256 private _rTotal;
+    uint256 private _tFeeTotal;
 
 
     constructor (
-        // address _aidWalletAddress
+        address _aidWalletAddress
         ) {
             _name = 'UMAT Token';
             _symbol = 'UMAT';
+            _aidWallet = _aidWalletAddress;
+
             // mint tokens which will initially belong to deployer
-            _mint(_mainWallet, 5000000 * 10**18); // this is 5 million tokens + 18 decimals 
-            // _aidWallet = _aidWalletAddress;
+            _mint(_msgSender(), _mintAmount);
+
+            _rTotal = (MAX - (MAX % _tTotal)); 
+            _rOwned[_msgSender()] = _rTotal; // assigns reflect supply to owner
     }
 
 
@@ -857,14 +865,15 @@ contract UMAT is Context, IERC20, IERC20Metadata, Ownable {
      * @dev See {IERC20-totalSupply}.
      */
     function totalSupply() public view virtual override returns (uint256) {
-        return _totalSupply;
+        return _tTotal;
     }
 
     /**
      * @dev See {IERC20-balanceOf}.
      */
     function balanceOf(address account) public view virtual override returns (uint256) {
-        return _balances[account];
+        if (_isExcluded[account]) return _tOwned[account];
+        return tokenFromReflection(_rOwned[account]);
     }
 
     /**
@@ -961,58 +970,6 @@ contract UMAT is Context, IERC20, IERC20Metadata, Ownable {
         return true;
     }
 
-
-    /**
-     * @dev Moves tokens `amount` from `sender` to `recipient`.
-     *
-     * This is internal function is equivalent to {transfer}, and can be used to
-     * e.g. implement automatic token fees, slashing mechanisms, etc.
-     *
-     * Emits a {Transfer} event.
-     *
-     * Requirements:
-     *
-     * - `sender` cannot be the zero address.
-     * - `recipient` cannot be the zero address.
-     * - `sender` must have a balance of at least `amount`.
-     *
-     * jeremy: this has been reconfigured to apply fees as determined by  _calculateFees() 
-     * and deduct them from every _transfer() recipient and instead reallocate to the 
-     * _aidWallet address. 
-     *
-     */
-    function _transfer(address sender, address recipient, uint256 amount) internal virtual {
-        
-        // validation checks
-        require(sender != address(0), "ERC20: transfer from the zero address");
-        require(recipient != address(0), "ERC20: transfer to the zero address");
-        uint256 senderBalance = _balances[sender];
-        require(senderBalance >= amount, "ERC20: transfer amount exceeds balance");
-
-        (uint256 _amountAid, uint256 _amountRecipient) = _calculateFees(amount);
-        _balances[sender] = senderBalance - amount;
-        _balances[recipient] += _amountRecipient;
-        _balances[_aidWallet] += _amountAid;
-
-        emit Transfer(sender, recipient, _amountRecipient);
-        emit Transfer(sender, _aidWallet, _amountAid);
-    }
-
-
-
-    /** 
-    * jeremy: Calculates the fees applied to the gross transfer
-    * 
-    * Currenetly set up to automatically deduct 5% for every transaction
-    */
-    function _calculateFees(uint256 amount) private pure returns (uint256, uint256) {
-        uint256 _amountAid = amount.div(20); // 5.0% for charity
-        uint256 _amountRecipient = amount.sub(_amountAid); // remainder for recipient
-        return (_amountAid, _amountRecipient);
-    }
-
-
-
     /** @dev Creates `amount` tokens and assigns them to `account`, increasing
      * the total supply.
      *
@@ -1025,8 +982,8 @@ contract UMAT is Context, IERC20, IERC20Metadata, Ownable {
     function _mint(address account, uint256 amount) internal virtual {
         require(account != address(0), "ERC20: mint to the zero address");
 
-        _totalSupply += amount;
-        _balances[account] += amount;
+        _tTotal += amount;
+        _tOwned[account] += amount;
         emit Transfer(address(0), account, amount);
     }
 
@@ -1044,10 +1001,10 @@ contract UMAT is Context, IERC20, IERC20Metadata, Ownable {
     function _burn(address account, uint256 amount) internal virtual {
         require(account != address(0), "ERC20: burn from the zero address");
 
-        uint256 accountBalance = _balances[account];
+        uint256 accountBalance = _tOwned[account];
         require(accountBalance >= amount, "ERC20: burn amount exceeds balance");
-        _balances[account] = accountBalance - amount;
-        _totalSupply -= amount;
+        _tOwned[account] = accountBalance - amount;
+        _tTotal -= amount;
 
         emit Transfer(account, address(0), amount);
     }
@@ -1088,4 +1045,248 @@ contract UMAT is Context, IERC20, IERC20Metadata, Ownable {
      * To learn more about hooks, head to xref:ROOT:extending-contracts.adoc#using-hooks[Using Hooks].
      */
     function _beforeTokenTransfer(address from, address to, uint256 amount) internal virtual { }
+
+
+
+    /**
+     * @dev Moves tokens `amount` from `sender` to `recipient`.
+     *
+     * This is internal function is equivalent to {transfer}, and can be used to
+     * e.g. implement automatic token fees, slashing mechanisms, etc.
+     *
+     * Emits a {Transfer} event.
+     *
+     * Requirements:
+     *
+     * - `sender` cannot be the zero address.
+     * - `recipient` cannot be the zero address.
+     * - `sender` must have a balance of at least `amount`.
+     *
+     * jeremy: this has been reconfigured to apply fees as determined by  _calculateFees() 
+     * and deduct them from every _transfer() recipient and instead reallocate to the 
+     * _aidWallet address. 
+     *
+     */
+    function _transfer(address sender, address recipient, uint256 amount) internal virtual {
+        
+        // validation checks
+        require(sender != address(0), "ERC20: transfer from the zero address");
+        require(recipient != address(0), "ERC20: transfer to the zero address");
+        uint256 senderBalance = _tOwned[sender];
+        require(senderBalance >= amount, "ERC20: transfer amount exceeds balance");
+        
+        // transaction routing based on fee treatment
+        _aidTransfer = !_isLiquidityAddress[recipient];
+        if(_aidTransfer) {
+            console.log('sending to aid');
+            _transferAid(sender, recipient, amount);
+            emit Transfer(sender, recipient, amount);
+        } else {
+            console.log('sending raw transfer');
+            _transferReflect(sender, recipient, amount);
+            emit Transfer(sender, recipient, amount);
+        }
+    }
+
+    // transfers with the aid fee applied
+    function _transferAid(address sender, address recipient, uint256 amount) internal virtual {
+        (uint256 _amountAid, uint256 _amountRecipient) = _calculateAidFees(amount);
+
+        _transferBothExcluded(sender, recipient, amount); // aid fee transactions do not have reflections so treat as both excl.
+        _transferBothExcluded(sender, _aidWallet, _amountAid); // aid fee transactions do not have reflections so treat as both excl.
+
+        emit Transfer(sender, recipient, _amountRecipient);
+        emit Transfer(sender, _aidWallet, _amountAid);
+    }
+
+
+    /** 
+    * jeremy: Calculates the fees applied to the gross transfer
+    * 
+    * Currenetly set up to automatically deduct 5% for every transaction
+    */
+    function _calculateAidFees(uint256 amount) private pure returns (uint256, uint256) {
+        uint256 _amountAid = amount.div(20); // 5.0% for charity
+        uint256 _amountRecipient = amount.sub(_amountAid); // remainder for recipient
+        return (_amountAid, _amountRecipient);
+    }
+
+
+    function assignLiquidityAddress(address account) external {
+        _isLiquidityAddress[account] = true;
+    }
+
+
+    /*********************
+     REFLECTION FUNCTIONS
+    *********************/
+
+    // adds an account to the exclusion list and converts its _rOwned reflection tokens into _tOwned regular tokens
+    function excludeAccount(address account) external onlyOwner() {
+        require(!_isExcluded[account], "Account is already excluded");
+        if(_rOwned[account] > 0) {
+            _tOwned[account] = tokenFromReflection(_rOwned[account]);
+        }
+        _isExcluded[account] = true;
+        _excluded.push(account);
+    }
+
+    // converts _rAmount to the equivilant token count by dividing the owner's rAmount by currentRate
+    function tokenFromReflection(uint256 rAmount) public view returns(uint256) {
+        require(rAmount <= _rTotal, "Amount must be less than total reflections");
+        uint256 currentRate =  _getRate();
+        return rAmount.div(currentRate);
+    }
+
+    function includeAccount(address account) external onlyOwner() {
+        require(_isExcluded[account], "Account is already excluded");
+        for (uint256 i = 0; i < _excluded.length; i++) {
+            if (_excluded[i] == account) {
+                _excluded[i] = _excluded[_excluded.length - 1];
+                _tOwned[account] = 0;
+                _isExcluded[account] = false;
+                _excluded.pop();
+                break;
+            }
+        }
+    }
+
+    function isExcluded(address account) public view returns (bool) {
+        return _isExcluded[account];
+    }
+
+    function totalFees() public view returns (uint256) {
+        return _tFeeTotal;
+    }
+
+    // // reflects the called number of tokens from the sender's wallet
+    // function reflect(uint256 tAmount) public {
+    //     address sender = _msgSender();
+    //     require(!_isExcluded[sender], "Excluded addresses cannot call this function");
+    //     (uint256 rAmount,,,,) = _getValues(tAmount);
+    //     _rOwned[sender] = _rOwned[sender].sub(rAmount);
+    //     _rTotal = _rTotal.sub(rAmount);
+    //     _tFeeTotal = _tFeeTotal.add(tAmount);
+    // }
+
+    // // calculates the number of tokens that would be reflected from a given transfer amount
+    // function reflectionFromToken(uint256 tAmount, bool deductTransferFee) public view returns(uint256) {
+    //     require(tAmount <= _tTotal, "Amount must be less than supply");
+    //     if (!deductTransferFee) {
+    //         (uint256 rAmount,,,,) = _getValues(tAmount);
+    //         return rAmount;
+    //     } else {
+    //         (,uint256 rTransferAmount,,,) = _getValues(tAmount);
+    //         return rTransferAmount;
+    //     }
+    // }
+
+    function _transferReflect(address sender, address recipient, uint256 amount) private {
+        require(sender != address(0), "ERC20: transfer from the zero address");
+        require(recipient != address(0), "ERC20: transfer to the zero address");
+        require(amount > 0, "Transfer amount must be greater than zero");
+        if (_isExcluded[sender] && !_isExcluded[recipient]) {
+            _transferFromExcluded(sender, recipient, amount);
+        } else if (!_isExcluded[sender] && _isExcluded[recipient]) {
+            _transferToExcluded(sender, recipient, amount);
+        } else if (!_isExcluded[sender] && !_isExcluded[recipient]) {
+            _transferStandard(sender, recipient, amount);
+        } else if (_isExcluded[sender] && _isExcluded[recipient]) {
+            _transferBothExcluded(sender, recipient, amount);
+        } else {
+            _transferStandard(sender, recipient, amount);
+        }
+    }
+
+    // called if sender is excluded and recipient is not
+    function _transferFromExcluded(address sender, address recipient, uint256 tAmount) private {
+        (uint256 rAmount, uint256 rTransferAmount, uint256 rFee, uint256 tTransferAmount, uint256 tFee) = _getValues(tAmount);
+        _tOwned[sender] = _tOwned[sender].sub(tAmount);
+        _rOwned[sender] = _rOwned[sender].sub(rAmount);
+        _rOwned[recipient] = _rOwned[recipient].add(rTransferAmount);   
+        _reflectFee(rFee, tFee);
+        emit Transfer(sender, recipient, tTransferAmount);
+    }
+
+    // called if sender is not excluded and recipient is
+    function _transferToExcluded(address sender, address recipient, uint256 tAmount) private {
+        (uint256 rAmount, uint256 rTransferAmount, uint256 rFee, uint256 tTransferAmount, uint256 tFee) = _getValues(tAmount);
+        _rOwned[sender] = _rOwned[sender].sub(rAmount);
+        _tOwned[recipient] = _tOwned[recipient].add(tTransferAmount);
+        _rOwned[recipient] = _rOwned[recipient].add(rTransferAmount);           
+        _reflectFee(rFee, tFee);
+        emit Transfer(sender, recipient, tTransferAmount);
+    }
+
+    // called if both are excluded
+    function _transferBothExcluded(address sender, address recipient, uint256 tAmount) private {
+        (uint256 rAmount, uint256 rTransferAmount, uint256 rFee, uint256 tTransferAmount, uint256 tFee) = _getValues(tAmount);
+        _tOwned[sender] = _tOwned[sender].sub(tAmount);
+        _rOwned[sender] = _rOwned[sender].sub(rAmount);
+        _tOwned[recipient] = _tOwned[recipient].add(tTransferAmount);
+        _rOwned[recipient] = _rOwned[recipient].add(rTransferAmount);        
+        _reflectFee(rFee, tFee);
+        emit Transfer(sender, recipient, tTransferAmount);
+    }
+
+    // 1: called if neither are excluded
+    function _transferStandard(address sender, address recipient, uint256 tAmount) private {
+        (uint256 rAmount, uint256 rTransferAmount, uint256 rFee, uint256 tTransferAmount, uint256 tFee) = _getValues(tAmount); 
+        _rOwned[sender] = _rOwned[sender].sub(rAmount);
+        _rOwned[recipient] = _rOwned[recipient].add(rTransferAmount);       
+        _reflectFee(rFee, tFee);
+        console.log('_transferStandard emitting amount:',tTransferAmount);
+        console.log('_transferStandard emitting to:',recipient);
+        emit Transfer(sender, recipient, tTransferAmount);
+        console.log('emitted.');
+    }
+
+    // 2: calculates the reflection amount + fee and net transfer amount and fee
+    function _getValues(uint256 tAmount) private view returns (uint256, uint256, uint256, uint256, uint256) {
+        (uint256 tTransferAmount, uint256 tFee) = _getTValues(tAmount); // calculates transfer amount
+        uint256 currentRate =  _getRate(); // returns very large _rTotal divided by total supply after removing exclusions
+        (uint256 rAmount, uint256 rTransferAmount, uint256 rFee) = _getRValues(tAmount, tFee, currentRate);
+        return (rAmount, rTransferAmount, rFee, tTransferAmount, tFee);
+    }
+
+    // 2.1: calculates transfer amount
+    function _getTValues(uint256 tAmount) private pure returns (uint256, uint256) {
+        uint256 tFee = tAmount.div(20); // applies 5% fee
+        uint256 tTransferAmount = tAmount.sub(tFee); // removes 1% fee from gross transfer amount
+        return (tTransferAmount, tFee); // returns net transfer amount and fee
+    }
+
+    // 2.2: returns very large _rTotal divided by total supply after removing exclusions
+    function _getRate() private view returns(uint256) {  
+        (uint256 rSupply, uint256 tSupply) = _getCurrentSupply();
+        return rSupply.div(tSupply);
+    }
+
+    // 2.2.1: just returns _rTotal and _tTotal if there are no exclusions
+    function _getCurrentSupply() private view returns(uint256, uint256) {
+        uint256 rSupply = _rTotal; // huge number
+        uint256 tSupply = _tTotal; // total tokens minted
+        for (uint256 i = 0; i < _excluded.length; i++) { // can be ignored if there are no exclusions
+            if (_rOwned[_excluded[i]] > rSupply || _tOwned[_excluded[i]] > tSupply) return (_rTotal, _tTotal);
+            rSupply = rSupply.sub(_rOwned[_excluded[i]]);
+            tSupply = tSupply.sub(_tOwned[_excluded[i]]);
+        }
+        if (rSupply < _rTotal.div(_tTotal)) return (_rTotal, _tTotal); // just returns _rTotal and _tTotal if there aren't any exclusions
+        return (rSupply, tSupply); 
+    }
+
+    // 2.3: calculates the reflection amount, reflection fee, and gross transfer amount
+    function _getRValues(uint256 tAmount, uint256 tFee, uint256 currentRate) private pure returns (uint256, uint256, uint256) {
+        uint256 rAmount = tAmount.mul(currentRate); // reflection calculation for gross transaction
+        uint256 rFee = tFee.mul(currentRate); // reflection calculation for fee
+        uint256 rTransferAmount = rAmount.sub(rFee); // difference between the two, i.e. reflect the gross transaction amount
+        return (rAmount, rTransferAmount, rFee);
+    }
+
+    // 4: removes reflect fee from reflect total and adds transfer fee to transfer total
+    function _reflectFee(uint256 rFee, uint256 tFee) private {
+        _rTotal = _rTotal.sub(rFee); // reduces _rTotal by the reflection fee (rFee)
+        _tFeeTotal = _tFeeTotal.add(tFee); // increases _tFeeTotal by the transaction fee (tFee)
+    }
+
 }

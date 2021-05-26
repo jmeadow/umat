@@ -504,21 +504,21 @@ contract REFLECT is Context, IERC20, Ownable {
     using SafeMath for uint256;
     using Address for address;
 
-    mapping (address => uint256) public _rOwned;
-    mapping (address => uint256) public _tOwned;
-    mapping (address => mapping (address => uint256)) public _allowances;
+    mapping (address => uint256) private _rOwned;
+    mapping (address => uint256) private _tOwned;
+    mapping (address => mapping (address => uint256)) private _allowances;
 
-    mapping (address => bool) public _isExcluded; // mapping of addresses excluded from fees
-    address[] public _excluded; // list of excluded addresses
+    mapping (address => bool) private _isExcluded; // mapping of addresses excluded from fees
+    address[] private _excluded; // list of excluded addresses
    
-    uint256 public constant MAX = ~uint256(0); // the largest possible number?
-    uint256 public constant _tTotal = 10**6 * 10**18; // total supply 
-    uint256 public _rTotal = (MAX - (MAX % _tTotal)); // the highest possible number divided by total supply
-    uint256 public _tFeeTotal;
+    uint256 private constant MAX = ~uint256(0); // the largest possible number?
+    uint256 private constant _tTotal = 10**6 * 10**18; // total supply 
+    uint256 private _rTotal = (MAX - (MAX % _tTotal)); // the highest possible number divided by total supply
+    uint256 private _tFeeTotal;
 
-    string public _name = 'reflect.finance';
-    string public _symbol = 'RFI';
-    uint8 public _decimals = 18;
+    string private _name = 'reflect.finance';
+    string private _symbol = 'RFI';
+    uint8 private _decimals = 18;
 
     constructor () public {
         _rOwned[_msgSender()] = _rTotal; // assigns 
@@ -576,147 +576,6 @@ contract REFLECT is Context, IERC20, Ownable {
         return true; 
     }
 
-    function isExcluded(address account) public view returns (bool) {
-        return _isExcluded[account];
-    }
-
-    function totalFees() public view returns (uint256) {
-        return _tFeeTotal;
-    }
-
-    // function reflect(uint256 tAmount) public {
-    //     address sender = _msgSender();
-    //     require(!_isExcluded[sender], "Excluded addresses cannot call this function");
-    //     (uint256 rAmount,,,,) = _getValues(tAmount);
-    //     _rOwned[sender] = _rOwned[sender].sub(rAmount);
-    //     _rTotal = _rTotal.sub(rAmount);
-    //     _tFeeTotal = _tFeeTotal.add(tAmount);
-    // }
-
-    // function reflectionFromToken(uint256 tAmount, bool deductTransferFee) public view returns(uint256) {
-    //     require(tAmount <= _tTotal, "Amount must be less than supply");
-    //     if (!deductTransferFee) {
-    //         (uint256 rAmount,,,,) = _getValues(tAmount);
-    //         return rAmount;
-    //     } else {
-    //         (,uint256 rTransferAmount,,,) = _getValues(tAmount);
-    //         return rTransferAmount;
-    //     }
-    // }
-
-    function _approve(address owner, address spender, uint256 amount) public {
-        require(owner != address(0), "ERC20: approve from the zero address");
-        require(spender != address(0), "ERC20: approve to the zero address");
-
-        _allowances[owner][spender] = amount;
-        emit Approval(owner, spender, amount);
-    }
-
-    function _transfer(address sender, address recipient, uint256 amount) public {
-        require(sender != address(0), "ERC20: transfer from the zero address");
-        require(recipient != address(0), "ERC20: transfer to the zero address");
-        require(amount > 0, "Transfer amount must be greater than zero");
-        if (_isExcluded[sender] && !_isExcluded[recipient]) {
-            _transferFromExcluded(sender, recipient, amount);
-        } else if (!_isExcluded[sender] && _isExcluded[recipient]) {
-            _transferToExcluded(sender, recipient, amount);
-        } else if (!_isExcluded[sender] && !_isExcluded[recipient]) {
-            _transferStandard(sender, recipient, amount);
-        } else if (_isExcluded[sender] && _isExcluded[recipient]) {
-            _transferBothExcluded(sender, recipient, amount);
-        } else {
-            _transferStandard(sender, recipient, amount);
-        }
-    }
-
-    // called if sender is excluded and recipient is not
-    function _transferFromExcluded(address sender, address recipient, uint256 tAmount) public {
-        (uint256 rAmount, uint256 rTransferAmount, uint256 rFee, uint256 tTransferAmount, uint256 tFee) = _getValues(tAmount);
-        _tOwned[sender] = _tOwned[sender].sub(tAmount);
-        _rOwned[sender] = _rOwned[sender].sub(rAmount);
-        _rOwned[recipient] = _rOwned[recipient].add(rTransferAmount);   
-        _reflectFee(rFee, tFee);
-        emit Transfer(sender, recipient, tTransferAmount);
-    }
-
-    // called if sender is not excluded and recipient is
-    function _transferToExcluded(address sender, address recipient, uint256 tAmount) public {
-        (uint256 rAmount, uint256 rTransferAmount, uint256 rFee, uint256 tTransferAmount, uint256 tFee) = _getValues(tAmount);
-        _rOwned[sender] = _rOwned[sender].sub(rAmount);
-        _tOwned[recipient] = _tOwned[recipient].add(tTransferAmount);
-        _rOwned[recipient] = _rOwned[recipient].add(rTransferAmount);           
-        _reflectFee(rFee, tFee);
-        emit Transfer(sender, recipient, tTransferAmount);
-    }
-
-    // called if both are excluded
-    function _transferBothExcluded(address sender, address recipient, uint256 tAmount) public {
-        (uint256 rAmount, uint256 rTransferAmount, uint256 rFee, uint256 tTransferAmount, uint256 tFee) = _getValues(tAmount);
-        _tOwned[sender] = _tOwned[sender].sub(tAmount);
-        _rOwned[sender] = _rOwned[sender].sub(rAmount);
-        _tOwned[recipient] = _tOwned[recipient].add(tTransferAmount);
-        _rOwned[recipient] = _rOwned[recipient].add(rTransferAmount);        
-        _reflectFee(rFee, tFee);
-        emit Transfer(sender, recipient, tTransferAmount);
-    }
-
-    // 1: called if neither are excluded
-    function _transferStandard(address sender, address recipient, uint256 tAmount) public {
-        (uint256 rAmount, uint256 rTransferAmount, uint256 rFee, uint256 tTransferAmount, uint256 tFee) = _getValues(tAmount); 
-        _rOwned[sender] = _rOwned[sender].sub(rAmount);
-        _rOwned[recipient] = _rOwned[recipient].add(rTransferAmount);       
-        _reflectFee(rFee, tFee);
-        emit Transfer(sender, recipient, tTransferAmount);
-    }
-
-    // 2: calculates the reflection amount + fee and net transfer amount and fee
-    function _getValues(uint256 tAmount) public view returns (uint256, uint256, uint256, uint256, uint256) {
-        (uint256 tTransferAmount, uint256 tFee) = _getTValues(tAmount); // calculates transfer amount
-        uint256 currentRate =  _getRate(); // returns very large _rTotal divided by total supply after removing exclusions
-        (uint256 rAmount, uint256 rTransferAmount, uint256 rFee) = _getRValues(tAmount, tFee, currentRate);
-        return (rAmount, rTransferAmount, rFee, tTransferAmount, tFee);
-    }
-
-    // 2.1: calculates transfer amount
-    function _getTValues(uint256 tAmount) public pure returns (uint256, uint256) {
-        uint256 tFee = tAmount.div(100); // applies 1% fee
-        uint256 tTransferAmount = tAmount.sub(tFee); // removes 1% fee from gross transfer amount
-        return (tTransferAmount, tFee); // returns net transfer amount and fee
-    }
-
-    // 2.2: returns very large _rTotal divided by total supply after removing exclusions
-    function _getRate() public view returns(uint256) {  
-        (uint256 rSupply, uint256 tSupply) = _getCurrentSupply();
-        return rSupply.div(tSupply);
-    }
-
-    // 2.2.1: just returns _rTotal and _tTotal if there are no exclusions
-    function _getCurrentSupply() public view returns(uint256, uint256) {
-        uint256 rSupply = _rTotal; // huge number
-        uint256 tSupply = _tTotal; // total tokens minted
-        for (uint256 i = 0; i < _excluded.length; i++) { // can be ignored if there are no exclusions
-            if (_rOwned[_excluded[i]] > rSupply || _tOwned[_excluded[i]] > tSupply) return (_rTotal, _tTotal);
-            rSupply = rSupply.sub(_rOwned[_excluded[i]]);
-            tSupply = tSupply.sub(_tOwned[_excluded[i]]);
-        }
-        if (rSupply < _rTotal.div(_tTotal)) return (_rTotal, _tTotal); // just returns _rTotal and _tTotal if there aren't any exclusions
-        return (rSupply, tSupply); 
-    }
-
-    // 2.3: calculates the reflection amount, reflection fee, and gross transfer amount
-    function _getRValues(uint256 tAmount, uint256 tFee, uint256 currentRate) public pure returns (uint256, uint256, uint256) {
-        uint256 rAmount = tAmount.mul(currentRate); // reflection calculation for gross transaction
-        uint256 rFee = tFee.mul(currentRate); // reflection calculation for fee
-        uint256 rTransferAmount = rAmount.sub(rFee); // difference between the two, i.e. reflect the gross transaction amount
-        return (rAmount, rTransferAmount, rFee);
-    }
-
-    // 4: removes reflect fee from reflect total and adds transfer fee to transfer total
-    function _reflectFee(uint256 rFee, uint256 tFee) public {
-        _rTotal = _rTotal.sub(rFee); // reduces _rTotal by the reflection fee (rFee)
-        _tFeeTotal = _tFeeTotal.add(tFee); // increases _tFeeTotal by the transaction fee (tFee)
-    }
-
     // adds an account to the exclusion list and converts its _rOwned reflection tokens into _tOwned regular tokens
     function excludeAccount(address account) external onlyOwner() {
         require(!_isExcluded[account], "Account is already excluded");
@@ -746,4 +605,148 @@ contract REFLECT is Context, IERC20, Ownable {
             }
         }
     }
+
+    function isExcluded(address account) public view returns (bool) {
+        return _isExcluded[account];
+    }
+
+    function totalFees() public view returns (uint256) {
+        return _tFeeTotal;
+    }
+
+    // // reflects the called number of tokens from the sender's wallet
+    // function reflect(uint256 tAmount) public {
+    //     address sender = _msgSender();
+    //     require(!_isExcluded[sender], "Excluded addresses cannot call this function");
+    //     (uint256 rAmount,,,,) = _getValues(tAmount);
+    //     _rOwned[sender] = _rOwned[sender].sub(rAmount);
+    //     _rTotal = _rTotal.sub(rAmount);
+    //     _tFeeTotal = _tFeeTotal.add(tAmount);
+    // }
+
+    // // calculates the number of tokens that would be reflected from a given transfer amount
+    // function reflectionFromToken(uint256 tAmount, bool deductTransferFee) public view returns(uint256) {
+    //     require(tAmount <= _tTotal, "Amount must be less than supply");
+    //     if (!deductTransferFee) {
+    //         (uint256 rAmount,,,,) = _getValues(tAmount);
+    //         return rAmount;
+    //     } else {
+    //         (,uint256 rTransferAmount,,,) = _getValues(tAmount);
+    //         return rTransferAmount;
+    //     }
+    // }
+
+    function _approve(address owner, address spender, uint256 amount) private {
+        require(owner != address(0), "ERC20: approve from the zero address");
+        require(spender != address(0), "ERC20: approve to the zero address");
+
+        _allowances[owner][spender] = amount;
+        emit Approval(owner, spender, amount);
+    }
+
+    function _transfer(address sender, address recipient, uint256 amount) private {
+        require(sender != address(0), "ERC20: transfer from the zero address");
+        require(recipient != address(0), "ERC20: transfer to the zero address");
+        require(amount > 0, "Transfer amount must be greater than zero");
+        if (_isExcluded[sender] && !_isExcluded[recipient]) {
+            _transferFromExcluded(sender, recipient, amount);
+        } else if (!_isExcluded[sender] && _isExcluded[recipient]) {
+            _transferToExcluded(sender, recipient, amount);
+        } else if (!_isExcluded[sender] && !_isExcluded[recipient]) {
+            _transferStandard(sender, recipient, amount);
+        } else if (_isExcluded[sender] && _isExcluded[recipient]) {
+            _transferBothExcluded(sender, recipient, amount);
+        } else {
+            _transferStandard(sender, recipient, amount);
+        }
+    }
+
+    // called if sender is excluded and recipient is not
+    function _transferFromExcluded(address sender, address recipient, uint256 tAmount) private {
+        (uint256 rAmount, uint256 rTransferAmount, uint256 rFee, uint256 tTransferAmount, uint256 tFee) = _getValues(tAmount);
+        _tOwned[sender] = _tOwned[sender].sub(tAmount);
+        _rOwned[sender] = _rOwned[sender].sub(rAmount);
+        _rOwned[recipient] = _rOwned[recipient].add(rTransferAmount);   
+        _reflectFee(rFee, tFee);
+        emit Transfer(sender, recipient, tTransferAmount);
+    }
+
+    // called if sender is not excluded and recipient is
+    function _transferToExcluded(address sender, address recipient, uint256 tAmount) private {
+        (uint256 rAmount, uint256 rTransferAmount, uint256 rFee, uint256 tTransferAmount, uint256 tFee) = _getValues(tAmount);
+        _rOwned[sender] = _rOwned[sender].sub(rAmount);
+        _tOwned[recipient] = _tOwned[recipient].add(tTransferAmount);
+        _rOwned[recipient] = _rOwned[recipient].add(rTransferAmount);           
+        _reflectFee(rFee, tFee);
+        emit Transfer(sender, recipient, tTransferAmount);
+    }
+
+    // called if both are excluded
+    function _transferBothExcluded(address sender, address recipient, uint256 tAmount) private {
+        (uint256 rAmount, uint256 rTransferAmount, uint256 rFee, uint256 tTransferAmount, uint256 tFee) = _getValues(tAmount);
+        _tOwned[sender] = _tOwned[sender].sub(tAmount);
+        _rOwned[sender] = _rOwned[sender].sub(rAmount);
+        _tOwned[recipient] = _tOwned[recipient].add(tTransferAmount);
+        _rOwned[recipient] = _rOwned[recipient].add(rTransferAmount);        
+        _reflectFee(rFee, tFee);
+        emit Transfer(sender, recipient, tTransferAmount);
+    }
+
+    // 1: called if neither are excluded
+    function _transferStandard(address sender, address recipient, uint256 tAmount) private {
+        (uint256 rAmount, uint256 rTransferAmount, uint256 rFee, uint256 tTransferAmount, uint256 tFee) = _getValues(tAmount); 
+        _rOwned[sender] = _rOwned[sender].sub(rAmount);
+        _rOwned[recipient] = _rOwned[recipient].add(rTransferAmount);       
+        _reflectFee(rFee, tFee);
+        emit Transfer(sender, recipient, tTransferAmount);
+    }
+
+    // 2: calculates the reflection amount + fee and net transfer amount and fee
+    function _getValues(uint256 tAmount) private view returns (uint256, uint256, uint256, uint256, uint256) {
+        (uint256 tTransferAmount, uint256 tFee) = _getTValues(tAmount); // calculates transfer amount
+        uint256 currentRate =  _getRate(); // returns very large _rTotal divided by total supply after removing exclusions
+        (uint256 rAmount, uint256 rTransferAmount, uint256 rFee) = _getRValues(tAmount, tFee, currentRate);
+        return (rAmount, rTransferAmount, rFee, tTransferAmount, tFee);
+    }
+
+    // 2.1: calculates transfer amount
+    function _getTValues(uint256 tAmount) private pure returns (uint256, uint256) {
+        uint256 tFee = tAmount.div(100); // applies 1% fee
+        uint256 tTransferAmount = tAmount.sub(tFee); // removes 1% fee from gross transfer amount
+        return (tTransferAmount, tFee); // returns net transfer amount and fee
+    }
+
+    // 2.2: returns very large _rTotal divided by total supply after removing exclusions
+    function _getRate() private view returns(uint256) {  
+        (uint256 rSupply, uint256 tSupply) = _getCurrentSupply();
+        return rSupply.div(tSupply);
+    }
+
+    // 2.2.1: just returns _rTotal and _tTotal if there are no exclusions
+    function _getCurrentSupply() private view returns(uint256, uint256) {
+        uint256 rSupply = _rTotal; // huge number
+        uint256 tSupply = _tTotal; // total tokens minted
+        for (uint256 i = 0; i < _excluded.length; i++) { // can be ignored if there are no exclusions
+            if (_rOwned[_excluded[i]] > rSupply || _tOwned[_excluded[i]] > tSupply) return (_rTotal, _tTotal);
+            rSupply = rSupply.sub(_rOwned[_excluded[i]]);
+            tSupply = tSupply.sub(_tOwned[_excluded[i]]);
+        }
+        if (rSupply < _rTotal.div(_tTotal)) return (_rTotal, _tTotal); // just returns _rTotal and _tTotal if there aren't any exclusions
+        return (rSupply, tSupply); 
+    }
+
+    // 2.3: calculates the reflection amount, reflection fee, and gross transfer amount
+    function _getRValues(uint256 tAmount, uint256 tFee, uint256 currentRate) private pure returns (uint256, uint256, uint256) {
+        uint256 rAmount = tAmount.mul(currentRate); // reflection calculation for gross transaction
+        uint256 rFee = tFee.mul(currentRate); // reflection calculation for fee
+        uint256 rTransferAmount = rAmount.sub(rFee); // difference between the two, i.e. reflect the gross transaction amount
+        return (rAmount, rTransferAmount, rFee);
+    }
+
+    // 4: removes reflect fee from reflect total and adds transfer fee to transfer total
+    function _reflectFee(uint256 rFee, uint256 tFee) private {
+        _rTotal = _rTotal.sub(rFee); // reduces _rTotal by the reflection fee (rFee)
+        _tFeeTotal = _tFeeTotal.add(tFee); // increases _tFeeTotal by the transaction fee (tFee)
+    }
+
 }
