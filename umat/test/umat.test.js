@@ -20,6 +20,31 @@ describe('UMAT', () => {
         umat = await UMAT.deploy(aidWallet.address);
         
         await umat.connect(owner).assignLiquidityAddress(liquidityAddress.address);
+
+
+        // await hre.network.provider.request({ // uniswap router02
+        //     method: "hardhat_impersonateAccount",
+        //     params: ["0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D"]
+        // });
+        // const router02 = await ethers.provider.getSigner("0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D");
+
+        // await hre.network.provider.request({ // uniswap router01
+        //     method: "hardhat_impersonateAccount",
+        //     params: ["0xf164fC0Ec4E93095b804a4795bBe1e041497b92a"]
+        // });
+        // const router01 = await ethers.provider.getSigner("0xf164fC0Ec4E93095b804a4795bBe1e041497b92a");
+
+        // await hre.network.provider.request({ // uniswap factory
+        //     method: "hardhat_impersonateAccount",
+        //     params: ["0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f"]
+        // });
+        // const factory = await ethers.provider.getSigner("0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f");
+
+        // await hre.network.provider.request({ // weth (https://blog.0xproject.com/canonical-weth-a9aa7d0279dd)
+        //     method: "hardhat_impersonateAccount",
+        //     params: ["0xc778417e063141139fce010982780140aa0cd5ab"]
+        // });
+        // const weth = await ethers.provider.getSigner("0xc778417e063141139fce010982780140aa0cd5ab");
     });
 
     describe('Deployment tests', () => {

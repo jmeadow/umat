@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 // built from zeppelin templates and altered to 0.7.3 to work with local hardhat
 
-pragma solidity ^0.7.3;
+pragma solidity ^0.8.4;
 
-import "hardhat/console.sol";
+// import "hardhat/console.sol";
 
 /**
  * @dev Interface of the ERC20 standard as defined in the EIP.
@@ -794,7 +794,6 @@ contract UMAT is Context, IERC20, IERC20Metadata, Ownable {
     // standard declarations
     string private _name;
     string private _symbol;
-    uint public _tTotal;
     uint private _mintAmount = 5000000 * 10**18; // this is 5 million tokens + 18 decimals 
     mapping (address => mapping (address => uint256)) private _allowances;
 
@@ -804,19 +803,42 @@ contract UMAT is Context, IERC20, IERC20Metadata, Ownable {
     mapping (address => bool) public _isLiquidityAddress;
 
     // reflection variables
+    uint public _tTotal;
+    uint256 private _rTotal;
+    uint256 private _tFeeTotal;
+    uint256 private constant MAX = ~uint256(0); // the largest possible number?
     mapping (address => uint256) private _rOwned;
     mapping (address => uint256) private _tOwned;
     mapping (address => bool) public _isExcluded; // mapping of addresses excluded from fees
     address[] private _excluded; // list of excluded addresses
-    uint256 private constant MAX = ~uint256(0); // the largest possible number?
-    // uint256 private constant _tTotal = 10**6 * 10**18; // total supply 
-    uint256 private _rTotal;
-    uint256 private _tFeeTotal;
 
+    // // uniswap variables
+    // IUniswapV2Router02 public immutable uniswapV2Router;
+    // address public immutable uniswapV2Pair;
+    // uint8 public feeDecimals;
+    // uint32 public feePercentage;
+    // uint128 private minTokensBeforeSwap;
+    // bool inSwapAndLiquify;
+    // bool swapAndLiquifyEnabled;
+    // event FeeUpdated(uint8 feeDecimals, uint32 feePercentage);
+    // event MinTokensBeforeSwapUpdated(uint128 minTokensBeforeSwap);
+    // event SwapAndLiquifyEnabledUpdated(bool enabled);
+    // event SwapAndLiquify(
+    //     uint256 tokensSwapped,
+    //     uint256 ethReceived,
+    //     uint256 tokensIntoLiqudity
+    // );
+
+    // modifier lockTheSwap {
+    //     inSwapAndLiquify = true;
+    //     _;
+    //     inSwapAndLiquify = false;
+    // }
 
     constructor (
         address _aidWalletAddress
         ) {
+            // basic token facts
             _name = 'UMAT Token';
             _symbol = 'UMAT';
             _aidWallet = _aidWalletAddress;
@@ -824,8 +846,16 @@ contract UMAT is Context, IERC20, IERC20Metadata, Ownable {
             // mint tokens which will initially belong to deployer
             _mint(_msgSender(), _mintAmount);
 
+            // reflection assignments
             _rTotal = (MAX - (MAX % _tTotal)); 
             _rOwned[_msgSender()] = _rTotal; // assigns reflect supply to owner
+
+            // uniswap assignments
+            // IUniswapV2Router02 _uniswapV2Router = IUniswapV2Router02(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D); // from https://uniswap.org/docs/v2/smart-contracts/router02/
+            // uniswapV2Pair = IUniswapV2Factory(_uniswapV2Router.factory())
+            //     .createPair(address(this), _uniswapV2Router.WETH());
+
+            // uniswapV2Router = _uniswapV2Router;
     }
 
 
@@ -1078,11 +1108,9 @@ contract UMAT is Context, IERC20, IERC20Metadata, Ownable {
         // transaction routing based on fee treatment
         _aidTransfer = !_isLiquidityAddress[recipient];
         if(_aidTransfer) {
-            console.log('sending to aid');
             _transferAid(sender, recipient, amount);
             emit Transfer(sender, recipient, amount);
         } else {
-            console.log('sending raw transfer');
             _transferReflect(sender, recipient, amount);
             emit Transfer(sender, recipient, amount);
         }
@@ -1235,10 +1263,7 @@ contract UMAT is Context, IERC20, IERC20Metadata, Ownable {
         _rOwned[sender] = _rOwned[sender].sub(rAmount);
         _rOwned[recipient] = _rOwned[recipient].add(rTransferAmount);       
         _reflectFee(rFee, tFee);
-        console.log('_transferStandard emitting amount:',tTransferAmount);
-        console.log('_transferStandard emitting to:',recipient);
         emit Transfer(sender, recipient, tTransferAmount);
-        console.log('emitted.');
     }
 
     // 2: calculates the reflection amount + fee and net transfer amount and fee
