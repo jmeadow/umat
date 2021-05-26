@@ -1109,10 +1109,8 @@ contract UMAT is Context, IERC20, IERC20Metadata, Ownable {
         _aidTransfer = !_isLiquidityAddress[recipient];
         if(_aidTransfer) {
             _transferAid(sender, recipient, amount);
-            emit Transfer(sender, recipient, amount);
         } else {
             _transferReflect(sender, recipient, amount);
-            emit Transfer(sender, recipient, amount);
         }
     }
 
@@ -1122,9 +1120,6 @@ contract UMAT is Context, IERC20, IERC20Metadata, Ownable {
 
         _transferBothExcluded(sender, recipient, amount); // aid fee transactions do not have reflections so treat as both excl.
         _transferBothExcluded(sender, _aidWallet, _amountAid); // aid fee transactions do not have reflections so treat as both excl.
-
-        emit Transfer(sender, recipient, _amountRecipient);
-        emit Transfer(sender, _aidWallet, _amountAid);
     }
 
 
