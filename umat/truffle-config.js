@@ -36,6 +36,17 @@ module.exports = {
    */
 
   networks: {
+    development: {
+      fork: "https://eth-rinkeby.alchemyapi.io/v2/PreUJsFijadg2ojXctMhKMlCpWcWqjIM"
+      ,network_id: 4 // rinkeby is 4 per https://besu.hyperledger.org/en/stable/Concepts/NetworkID-And-ChainID/
+    },
+      mainnet_fork: {
+      host: "127.0.0.1", // Localhost (default: none)
+      port: 8545, // Standard Ethereum port (default: none)
+      network_id: 4, // rinkeby network_id
+      gas: 7984452, // causes "exceeds block gas limit" somehow
+      gasPrice: 2000000000
+    }
     // Useful for testing. The `development` name is special - truffle uses it by default
     // if it's defined here and no other network is specified at the command line.
     // You should run a client (like ganache-cli, geth or parity) in a separate terminal
