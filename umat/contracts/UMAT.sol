@@ -826,7 +826,10 @@ contract UMAT is Context, IERC20, IERC20Metadata, Ownable {
     uint128 private minTokensBeforeSwap;
     bool inSwapAndLiquify;
     bool swapAndLiquifyEnabled;
-    event FeeUpdated(uint8 feeDecimals, uint32 feePercentage);
+    
+    uint256 public _maxTxAmount = 5000000 * 10**6 * 10**9;
+    uint256 private numTokensSellToAddToLiquidity = 500000 * 10**6 * 10**9;
+    
     event MinTokensBeforeSwapUpdated(uint128 minTokensBeforeSwap);
     event SwapAndLiquifyEnabledUpdated(bool enabled);
     event SwapAndLiquify(
@@ -1342,18 +1345,24 @@ contract UMAT is Context, IERC20, IERC20Metadata, Ownable {
     //to recieve ETH from uniswapV2Router when swapping
     receive() external payable {}
 
-    function addLiquidity(uint256 tokenAmount, uint256 ethAmount) public {
+    function addLiquidity(
+        address tokenAddress
+        ,address sender
+        ,uint256 tokenAmount
+        ,uint256 ethAmount
+        ,uint deadline
+        ) public payable {
         // approve token transfer to cover all possible scenarios
-        _approve(address(this), address(uniswapV2Router), tokenAmount);
+        _approve(sender, address(uniswapV2Router), tokenAmount);
 
         // add the liquidity
         uniswapV2Router.addLiquidityETH{value: ethAmount}(
-            address(this),
+            tokenAddress,
             tokenAmount,
             0, // slippage is unavoidable
             0, // slippage is unavoidable
-            owner(),
-            block.timestamp
+            sender,
+            deadline
         );
     }
 

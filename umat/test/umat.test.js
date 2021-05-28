@@ -179,9 +179,31 @@ contract('UMAT', (accounts) => {
 
         it('we can add liquidity', async () => {
             umatAmount = web3.utils.toWei('100', 'ether');
+<<<<<<< Updated upstream
             ethAmount = web3.utils.toWei('100', 'ether');
             
             await umat.addLiquidity(umatAmount, ethAmount, {from: owner});
+=======
+            ethAmount = web3.utils.toWei('1', 'ether');
+            deadline = Math.floor(Date.now() / 1000) + (60 * 20); // now plus 20 minutes
+
+            console.log('router address: '+router);
+            await umat.approve(router, umatAmount);
+            console.log('approved sending to router');
+
+            await umat.addLiquidity(
+                umat.address
+                ,owner
+                ,umatAmount
+                ,ethAmount
+                ,deadline 
+                ,{ 
+                    from: owner
+                    ,value: ethAmount
+                }
+            );
+            console.log('please dear god');
+>>>>>>> Stashed changes
         });
     });
 });
