@@ -1,5 +1,5 @@
-const UMAT = artifacts.require("UMAT");
+const SafeMoon = artifacts.require("safemoon");
 
 module.exports = function (deployer) {
-  deployer.deploy(UMAT); 
+  deployer.deploy(SafeMoon); 
 };
