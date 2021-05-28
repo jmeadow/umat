@@ -1052,6 +1052,7 @@ contract SafeMoon is Context, IERC20, Ownable {
         _tokenTransfer(from,to,amount,takeFee);
     }
 
+    // initiates liquidity adding process
     function swapAndLiquify(uint256 contractTokenBalance) private lockTheSwap {
         // split the contract balance into halves
         uint256 half = contractTokenBalance.div(2);

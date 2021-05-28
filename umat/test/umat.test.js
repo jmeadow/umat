@@ -23,7 +23,7 @@ let isLiquid;
 
 // testing configurations
 let verbose;
-let skipDeploymentTests; 
+let runPastTests; 
 
 
 contract('UMAT', (accounts) => {
@@ -39,16 +39,17 @@ contract('UMAT', (accounts) => {
 
         umat = await umatArtifact.deployed();
         pairAddress = await umat.uniswapV2Pair();
+        router = await umat.uniswapV2Router();
 
         await umat.assignLiquidityAddress(liquidityAddress);
         await umat.assignAidWallet(aidWallet);
 
         verbose = false;
-        testDeployment = false; 
+        runPastTests = true; 
     });
 
-    if(skipDeploymentTests) {
-        describe('Basic deployment tests', () => {
+    describe('Basic deployment tests', () => {
+        if(runPastTests) {
             it('has an address and symbol is UMAT', async () => {
                 const umatSymbol = await umat.symbol();
 
@@ -103,8 +104,8 @@ contract('UMAT', (accounts) => {
                 isLiquid = await umat._isLiquidityAddress(liquidityAddress);
                 assert.equal(true, isLiquid);
             });
-        });
-    }
+        }    
+    });
 
     describe('Basic token transaction tests', () => {
         it('owner can transfer UMAT wei and 5% go to charity wallet', async () => {
@@ -179,9 +180,26 @@ contract('UMAT', (accounts) => {
 
         it('we can add liquidity', async () => {
             umatAmount = web3.utils.toWei('100', 'ether');
-            ethAmount = web3.utils.toWei('100', 'ether');
-            
-            await umat.addLiquidity(umatAmount, ethAmount, {from: owner});
+            ethAmount = web3.utils.toWei('1', 'ether');
+            deadline = Math.floor(Date.now() / 1000) + (60 * 20); // now plus 20 minutes
+
+            console.log('router address: '+router);
+            await umat.approve(router, umatAmount);
+            console.log('approved sending to router');
+
+            await umat.addLiquidityETHTest(
+                umat.address
+                ,umatAmount
+                ,0
+                ,0
+                ,owner
+                ,deadline 
+                ,{ 
+                    from: owner
+                    ,value: ethAmount
+                }
+            );
+            console.log('please dear god');
         });
     });
 });
