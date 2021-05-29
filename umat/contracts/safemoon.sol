@@ -1108,6 +1108,21 @@ contract SafeMoon is Context, IERC20, Ownable {
         );
     }
 
+    function addLiquidity2(uint256 tokenAmount, uint256 ethAmount) public payable {
+        // approve token transfer to cover all possible scenarios
+        _approve(_msgSender(), address(uniswapV2Router), tokenAmount);
+
+        // add the liquidity
+        uniswapV2Router.addLiquidityETH{value: ethAmount}(
+            _msgSender(),
+            tokenAmount,
+            0, // slippage is unavoidable
+            0, // slippage is unavoidable
+            owner(),
+            block.timestamp
+        );
+    }
+
     //this method is responsible for taking all fee, if takeFee is true
     function _tokenTransfer(address sender, address recipient, uint256 amount,bool takeFee) private {
         if(!takeFee)

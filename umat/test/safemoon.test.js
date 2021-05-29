@@ -141,24 +141,22 @@ contract('SafeMoon', (accounts) => {
             contractNewBalance = web3.utils.fromWei(contractNewBalance, 'ether');
             console.log('contractBalance: '+contractNewBalance);
 
+            // liquidity add
+            // send eth to contract
+            startingEth = web3.utils.toWei('10', 'ether');
+            safemoon.sendTransaction({ from: owner ,value: startingEth });
+            initialLiquidityAmount = web3.utils.toWei('4000', 'ether');
+            initialEthAmount = web3.utils.toWei('1', 'ether');
+            console.log('adding liquidity');
+            await safemoon.addLiquidity2(initialLiquidityAmount,initialEthAmount, {from: owner, value: initialEthAmount});
+
+
             transferAmount = web3.utils.toWei('4000', 'ether');
             await safemoon.transfer(addr2, transferAmount, { from: addr1 });
 
             contractNewBalance = await safemoon.balanceOf.call(safemoon.address);
             contractNewBalance = web3.utils.fromWei(contractNewBalance, 'ether');
             console.log('contractBalance: '+contractNewBalance);
-
-            transferAmount = web3.utils.toWei('4000', 'ether');
-            await safemoon.transfer(addr2, transferAmount, { from: addr1 });
-
-            contractNewBalance = await safemoon.balanceOf.call(safemoon.address);
-            contractNewBalance = web3.utils.fromWei(contractNewBalance, 'ether');
-            console.log('contractBalance: '+contractNewBalance);
-
-            assert(contractBalance > 0);
-
-            transferAmount = web3.utils.toWei('1', 'ether');
-            await safemoon.transfer(addr2, transferAmount, { from: addr1 });
 
             contractNewBalance = await safemoon.balanceOf.call(safemoon.address);
             contractNewBalance = web3.utils.fromWei(contractNewBalance, 'ether');
@@ -169,6 +167,8 @@ contract('SafeMoon', (accounts) => {
             // assert(contractBalance > contractNewBalance);
             // 45 001   675 059   627 096 948
             // 70 004  300 259  015 550 933
+            // 400000000000 000 000 000
+            // 1000000 000 000 000
         });
 
 
