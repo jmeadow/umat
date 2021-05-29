@@ -801,7 +801,7 @@ contract UMAT is Context, IERC20, IERC20Metadata, Ownable {
     // umat variables
     address public aidFeeWallet = 0xd6791786469b579D3cB307aCCB92ECa7Ad42c0a3; 
     address public aidEquityWallet = 0xe70449a4432030BC181518DCA90973AB319A25a6; 
-    uint public _aidEquityShare = 2000; // initial allocation to aidEquityWallet in basis
+    uint public _aidEquityShare = 2000; // initial allocation to aidEquityWallet in basis points
    
     // reflection variables
     uint public _tTotal;
