@@ -793,7 +793,7 @@ contract UMAT is Context, IERC20, IERC20Metadata, Ownable {
 
     // standard declarations
     string private _name = "UMAT Token";
-    string private _symbol = "UMAT v1.3.7";
+    string private _symbol = "UMAT v2.0";
     uint8 private _decimals = 18;
     uint private _mintAmount = 10**6 * 10**18; // this is 1 million tokens + 18 decimals 
     mapping (address => mapping (address => uint256)) private _allowances;
