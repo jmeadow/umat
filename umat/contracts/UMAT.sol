@@ -792,9 +792,9 @@ contract UMAT is Context, IERC20, IERC20Metadata, Ownable {
     using Address for address;
 
     // standard declarations
-    string private _name = "UMAT Token";
-    string private _symbol = "UMAT v2.2";
-    uint8 private _decimals = 18;
+    string private constant _name = "UMAT Token";
+    string private constant _symbol = "UMAT v2.2";
+    uint8 private constant _decimals = 18;
     uint private _mintAmount = 10**6 * 10**18; // this is 1 million tokens + 18 decimals 
     mapping (address => mapping (address => uint256)) private _allowances;
 
@@ -1195,8 +1195,6 @@ contract UMAT is Context, IERC20, IERC20Metadata, Ownable {
             _transferStandard(sender, recipient, amount);
         } else if (_isExcluded[sender] && _isExcluded[recipient]) {
             _transferBothExcluded(sender, recipient, amount);
-        } else {
-            _transferStandard(sender, recipient, amount);
         }
         
         if(!takeFee)
@@ -1380,7 +1378,7 @@ contract UMAT is Context, IERC20, IERC20Metadata, Ownable {
     }
 
     function includeInReward(address account) external onlyOwner() {
-        require(_isExcluded[account], "Account is already excluded");
+        require(_isExcluded[account], "Account is already included");
         for (uint256 i = 0; i < _excluded.length; i++) {
             if (_excluded[i] == account) {
                 _excluded[i] = _excluded[_excluded.length - 1];
@@ -1490,7 +1488,7 @@ contract UMAT is Context, IERC20, IERC20Metadata, Ownable {
         emit SwapAndLiquifyEnabledUpdated(_enabled);
     }
 
-     //to recieve ETH from uniswapV2Router when swapping
+     //to receive ETH from uniswapV2Router when swapping
     receive() external payable {}
 
 }
