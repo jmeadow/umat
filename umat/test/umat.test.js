@@ -1,7 +1,6 @@
 const { expect } = require("chai");
 const assert = require('assert');
 const umatArtifact = artifacts.require("UMAT");
-const BN = web3.utils.BN;
 
 // not needed if we are running network out of ganache mac app or using truffle develop
 // const ganache = require('ganache-cli');

@@ -793,7 +793,7 @@ contract UMAT is Context, IERC20, IERC20Metadata, Ownable {
 
     // standard declarations
     string private _name = "UMAT Token";
-    string private _symbol = "UMAT v2.1";
+    string private _symbol = "UMAT v2.2";
     uint8 private _decimals = 18;
     uint private _mintAmount = 10**6 * 10**18; // this is 1 million tokens + 18 decimals 
     mapping (address => mapping (address => uint256)) private _allowances;
@@ -801,7 +801,8 @@ contract UMAT is Context, IERC20, IERC20Metadata, Ownable {
     // umat variables
     address public aidFeeWallet = 0xd6791786469b579D3cB307aCCB92ECa7Ad42c0a3; 
     address public aidEquityWallet = 0xe70449a4432030BC181518DCA90973AB319A25a6; 
-    uint public _aidEquityShare = 2000; // initial allocation to aidEquityWallet in basis points
+    uint private _aidEquityShare = 2000; // initial allocation to aidEquityWallet in basis points
+    mapping (address => mapping (uint256 => uint256)) public unlockFeeDates; // tracks when unlock fees will no longer be applied
    
     // reflection variables
     uint public _tTotal;
@@ -830,7 +831,7 @@ contract UMAT is Context, IERC20, IERC20Metadata, Ownable {
     bool public swapAndLiquifyEnabled = true;
     
     uint256 public _maxTxAmount = _mintAmount; // transfers cannot be more than this
-    uint256 private numTokensSellToAddToLiquidity = 100 * 10**18; // contract will add to LP once it acquires this amount
+    uint256 private numTokensSellToAddToLiquidity = _mintAmount; // contract will add to LP once it acquires this amount
     
     event MinTokensBeforeSwapUpdated(uint256 minTokensBeforeSwap);
     event SwapAndLiquifyEnabledUpdated(bool enabled);
@@ -865,11 +866,12 @@ contract UMAT is Context, IERC20, IERC20Metadata, Ownable {
             .createPair(address(this), _uniswapV2Router.WETH());
         uniswapV2Router = _uniswapV2Router;
 
-        //exclude owner and this contract from fee
+        //exclude owner, aid wallets, and this contract from fee
         _isExcludedFromFee[owner()] = true;
         _isExcludedFromFee[aidFeeWallet] = true;
         _isExcludedFromFee[aidEquityWallet] = true;
         _isExcludedFromFee[address(this)] = true;
+        excludeFromReward(aidEquityWallet);
     }
 
     /**
