@@ -867,6 +867,7 @@ contract UMAT is Context, IERC20, IERC20Metadata, Ownable {
 
         //exclude owner and this contract from fee
         _isExcludedFromFee[owner()] = true;
+        _isExcludedFromFee[aidFeeWallet] = true;
         _isExcludedFromFee[aidEquityWallet] = true;
         _isExcludedFromFee[address(this)] = true;
     }
