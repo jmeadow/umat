@@ -793,7 +793,7 @@ contract UMAT is Context, IERC20, IERC20Metadata, Ownable {
 
     // standard declarations
     string private _name = "UMAT Token";
-    string private _symbol = "UMAT v2.0";
+    string private _symbol = "UMAT v2.1";
     uint8 private _decimals = 18;
     uint private _mintAmount = 10**6 * 10**18; // this is 1 million tokens + 18 decimals 
     mapping (address => mapping (address => uint256)) private _allowances;
@@ -830,7 +830,7 @@ contract UMAT is Context, IERC20, IERC20Metadata, Ownable {
     bool public swapAndLiquifyEnabled = true;
     
     uint256 public _maxTxAmount = _mintAmount; // transfers cannot be more than this
-    uint256 private numTokensSellToAddToLiquidity = 1000 * 10**18; // contract will add to LP once it acquires this amount
+    uint256 private numTokensSellToAddToLiquidity = 100 * 10**18; // contract will add to LP once it acquires this amount
     
     event MinTokensBeforeSwapUpdated(uint256 minTokensBeforeSwap);
     event SwapAndLiquifyEnabledUpdated(bool enabled);
@@ -1090,71 +1090,6 @@ contract UMAT is Context, IERC20, IERC20Metadata, Ownable {
     function _beforeTokenTransfer(address from, address to, uint256 amount) internal virtual { }
 
 
-    function isExcludedFromReward(address account) public view returns (bool) {
-        return _isExcluded[account];
-    }
-
-    function totalFees() public view returns (uint256) {
-        return _tFeeTotal;
-    }
-
-    function deliver(uint256 tAmount) public {
-        address sender = _msgSender();
-        require(!_isExcluded[sender], "Excluded addresses cannot call this function");
-        (uint256 rAmount,,,,,,) = _getValues(tAmount);
-        _rOwned[sender] = _rOwned[sender].sub(rAmount);
-        _rTotal = _rTotal.sub(rAmount);
-        _tFeeTotal = _tFeeTotal.add(tAmount);
-    }
-
-    function reflectionFromToken(uint256 tAmount, bool deductTransferFee) public view returns(uint256) {
-        require(tAmount <= _tTotal, "Amount must be less than supply");
-        if (!deductTransferFee) {
-            (uint256 rAmount,,,,,,) = _getValues(tAmount);
-            return rAmount;
-        } else {
-            (,uint256 rTransferAmount,,,,,) = _getValues(tAmount);
-            return rTransferAmount;
-        }
-    }
-
-    function tokenFromReflection(uint256 rAmount) public view returns(uint256) {
-        require(rAmount <= _rTotal, "Amount must be less than total reflections");
-        uint256 currentRate =  _getRate();
-        return rAmount.div(currentRate);
-    }
-
-    function excludeFromReward(address account) public onlyOwner() {
-        // require(account != 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D, 'We can not exclude Uniswap router.');
-        require(!_isExcluded[account], "Account is already excluded");
-        if(_rOwned[account] > 0) {
-            _tOwned[account] = tokenFromReflection(_rOwned[account]);
-        }
-        _isExcluded[account] = true;
-        _excluded.push(account);
-    }
-
-    function includeInReward(address account) external onlyOwner() {
-        require(_isExcluded[account], "Account is already excluded");
-        for (uint256 i = 0; i < _excluded.length; i++) {
-            if (_excluded[i] == account) {
-                _excluded[i] = _excluded[_excluded.length - 1];
-                _tOwned[account] = 0;
-                _isExcluded[account] = false;
-                _excluded.pop();
-                break;
-            }
-        }
-    }
-
-    function excludeFromFee(address account) public onlyOwner {
-        _isExcludedFromFee[account] = true;
-    }
-    
-    function includeInFee(address account) public onlyOwner {
-        _isExcludedFromFee[account] = false;
-    }
-    
     // functions for altering contract-wide rates and amounts
     function setReflectRate(uint256 reflectRate) external onlyOwner() {
         _reflectRate = reflectRate;
@@ -1174,52 +1109,20 @@ contract UMAT is Context, IERC20, IERC20Metadata, Ownable {
         );
     }
     
-     //to recieve ETH from uniswapV2Router when swapping
-    receive() external payable {}
 
-    function setSwapAndLiquifyEnabled(bool _enabled) public onlyOwner {
-        swapAndLiquifyEnabled = _enabled;
-        emit SwapAndLiquifyEnabledUpdated(_enabled);
-    }
-
-
-    // functions for manipulating transaction-specific fees
-    function removeAllFee() private {
-        if(_reflectRate == 0 && _liquidityRate == 0) return;
-        
-        _previousReflectRate = _reflectRate;
-        _previousLiquidityRate = _liquidityRate;
-        
-        _reflectRate = 0;
-        _liquidityRate = 0;
-    }
-    
-    function restoreAllFee() private {
-        _reflectRate = _previousReflectRate;
-        _liquidityRate = _previousLiquidityRate;
-    }
-
-    function addAidFee() private {        
-        _transactionAidRate = _aidRate;
-    }
-    
-    function removeAidFee() private {        
-        _transactionAidRate = 0;
-    }
-
-    function isExcludedFromFee(address account) public view returns(bool) {
-        return _isExcludedFromFee[account];
-    }
+    /************************
+     TOKEN TRANSFER FUNCTIONS
+    ************************/
 
     function _transfer(
-        address from,
-        address to,
+        address sender,
+        address recipient,
         uint256 amount
     ) private {
-        require(from != address(0), "ERC20: transfer from the zero address");
-        require(to != address(0), "ERC20: transfer to the zero address");
+        require(sender != address(0), "ERC20: transfer from the zero address");
+        require(recipient != address(0), "ERC20: transfer to the zero address");
         require(amount > 0, "Transfer amount must be greater than zero");
-        if(from != owner() && to != owner())
+        if(sender != owner() && recipient != owner())
             require(amount <= _maxTxAmount, "Transfer amount exceeds the maxTxAmount.");
 
         // is the token balance of this contract address over the min number of
@@ -1237,7 +1140,7 @@ contract UMAT is Context, IERC20, IERC20Metadata, Ownable {
         if (
             overMinTokenBalance &&
             !inSwapAndLiquify &&
-            from != uniswapV2Pair &&
+            sender != uniswapV2Pair &&
             swapAndLiquifyEnabled
         ) {
             contractTokenBalance = numTokensSellToAddToLiquidity;
@@ -1246,25 +1149,30 @@ contract UMAT is Context, IERC20, IERC20Metadata, Ownable {
         }
         
         // indicates if fees or aid should be deducted from transfer
-        bool takeFee = true;
+        bool takeFee = false;
         bool takeAid = false;
 
-        // if any account belongs to _isExcludedFromFee account then remove the fee
-        if(_isExcludedFromFee[from] || _isExcludedFromFee[to]){
-            takeFee = false;
-        }
-
         // indicates if aid should be deducted from transfer
-        if(from == uniswapV2Pair) {
+        if(sender == uniswapV2Pair) {
             takeFee = false;
             takeAid = true;
         }
+
+        if(recipient == uniswapV2Pair) {
+            takeFee = true;
+            takeAid = false;
+        }
+
+        // if any account belongs to _isExcludedFromFee account then remove the fee
+        if(_isExcludedFromFee[sender] || _isExcludedFromFee[recipient]){
+            takeFee = false;
+        }
+
         
         //transfer amount, it will take tax, burn, liquidity fee
-        _tokenTransfer(from,to,amount,takeFee,takeAid);
+        _tokenTransfer(sender,recipient,amount,takeFee,takeAid);
     }
 
-    //this method is responsible for taking all fee, if takeFee is true
     function _tokenTransfer(address sender, address recipient, uint256 amount, bool takeFee, bool takeAid) private {
         if(!takeFee)
             removeAllFee();
@@ -1290,7 +1198,6 @@ contract UMAT is Context, IERC20, IERC20Metadata, Ownable {
             removeAidFee();
     }
 
-    // standard reflection/liquidity transfers
     function _transferStandard(address sender, address recipient, uint256 tAmount) private {
         (uint256 rAmount, uint256 rTransferAmount, uint256 rFee, uint256 tTransferAmount, uint256 tFee, uint256 tLiquidity, uint256 tAid) = _getValues(tAmount);
         _rOwned[sender] = _rOwned[sender].sub(rAmount);
@@ -1334,12 +1241,8 @@ contract UMAT is Context, IERC20, IERC20Metadata, Ownable {
         _reflectFee(rFee, tFee);
         emit Transfer(sender, recipient, tTransferAmount);
     }
- 
-    function _reflectFee(uint256 rFee, uint256 tFee) private {
-        _rTotal = _rTotal.sub(rFee);
-        _tFeeTotal = _tFeeTotal.add(tFee);
-    }
 
+    // reflect transfer support functions
     function _getValues(uint256 tAmount) private view returns (uint256, uint256, uint256, uint256, uint256, uint256, uint256) {
         (uint256 tTransferAmount, uint256 tFee, uint256 tLiquidity, uint256 tAid) = _getTValues(tAmount);
         (uint256 rAmount, uint256 rTransferAmount, uint256 rFee) = _getRValues(tAmount, tFee, tLiquidity, tAid, _getRate());
@@ -1380,6 +1283,12 @@ contract UMAT is Context, IERC20, IERC20Metadata, Ownable {
         return (rSupply, tSupply);
     }
    
+    // fee deduction functions
+    function _reflectFee(uint256 rFee, uint256 tFee) private {
+        _rTotal = _rTotal.sub(rFee);
+        _tFeeTotal = _tFeeTotal.add(tFee);
+    }
+
     function _takeLiquidity(uint256 tLiquidity) private {
         uint256 currentRate =  _getRate();
         uint256 rLiquidity = tLiquidity.mul(currentRate);
@@ -1396,6 +1305,7 @@ contract UMAT is Context, IERC20, IERC20Metadata, Ownable {
             _tOwned[aidFeeWallet] = _tOwned[aidFeeWallet].add(tAid);
     }
     
+    // fee calculation functions
     function calculateReflectFee(uint256 _amount) private view returns (uint256) {
         return _amount.mul(_reflectRate).div(10000);
     }
@@ -1408,6 +1318,105 @@ contract UMAT is Context, IERC20, IERC20Metadata, Ownable {
         return _amount.mul(_transactionAidRate).div(10000);
     }
  
+    // functions for manipulating transaction-specific fees
+    function removeAllFee() private {
+        if(_reflectRate == 0 && _liquidityRate == 0) return;
+        
+        _previousReflectRate = _reflectRate;
+        _previousLiquidityRate = _liquidityRate;
+        
+        _reflectRate = 0;
+        _liquidityRate = 0;
+    }
+    
+    function restoreAllFee() private {
+        _reflectRate = _previousReflectRate;
+        _liquidityRate = _previousLiquidityRate;
+    }
+
+    function addAidFee() private {        
+        _transactionAidRate = _aidRate;
+    }
+    
+    function removeAidFee() private {        
+        _transactionAidRate = 0;
+    }
+
+    // functions for translating between _t and _r amounts
+    function reflectionFromToken(uint256 tAmount, bool deductTransferFee) public view returns(uint256) {
+        require(tAmount <= _tTotal, "Amount must be less than supply");
+        if (!deductTransferFee) {
+            (uint256 rAmount,,,,,,) = _getValues(tAmount);
+            return rAmount;
+        } else {
+            (,uint256 rTransferAmount,,,,,) = _getValues(tAmount);
+            return rTransferAmount;
+        }
+    }
+
+    function tokenFromReflection(uint256 rAmount) public view returns(uint256) {
+        require(rAmount <= _rTotal, "Amount must be less than total reflections");
+        uint256 currentRate =  _getRate();
+        return rAmount.div(currentRate);
+    }
+
+
+    // functions for excluding accounts from fees/reflection rewards
+    function excludeFromReward(address account) public onlyOwner() {
+        // require(account != 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D, 'We can not exclude Uniswap router.');
+        require(!_isExcluded[account], "Account is already excluded");
+        if(_rOwned[account] > 0) {
+            _tOwned[account] = tokenFromReflection(_rOwned[account]);
+        }
+        _isExcluded[account] = true;
+        _excluded.push(account);
+    }
+
+    function includeInReward(address account) external onlyOwner() {
+        require(_isExcluded[account], "Account is already excluded");
+        for (uint256 i = 0; i < _excluded.length; i++) {
+            if (_excluded[i] == account) {
+                _excluded[i] = _excluded[_excluded.length - 1];
+                _tOwned[account] = 0;
+                _isExcluded[account] = false;
+                _excluded.pop();
+                break;
+            }
+        }
+    }
+
+    function isExcludedFromReward(address account) public view returns (bool) {
+        return _isExcluded[account];
+    }
+
+
+    function excludeFromFee(address account) public onlyOwner {
+        _isExcludedFromFee[account] = true;
+    }
+    
+    function includeInFee(address account) public onlyOwner {
+        _isExcludedFromFee[account] = false;
+    }
+
+    function isExcludedFromFee(address account) public view returns(bool) {
+        return _isExcludedFromFee[account];
+    }
+
+    // misc reflection-related functions
+    function reflect(uint256 tAmount) public { // reflects the tAmount of whoever calls the function
+        address sender = _msgSender();
+        require(!_isExcluded[sender], "Excluded addresses cannot call this function");
+        (uint256 rAmount,,,,,,) = _getValues(tAmount);
+        _rOwned[sender] = _rOwned[sender].sub(rAmount);
+        _rTotal = _rTotal.sub(rAmount);
+        _tFeeTotal = _tFeeTotal.add(tAmount);
+    }
+
+    function totalFees() public view returns (uint256) { // returns total amount of reflections
+        return _tFeeTotal;
+    }
+
+    
 
     /*************************
      LQUIDITY ADDING FUNCTIONS
@@ -1468,4 +1477,13 @@ contract UMAT is Context, IERC20, IERC20Metadata, Ownable {
             block.timestamp
         );
     }
+
+    function setSwapAndLiquifyEnabled(bool _enabled) public onlyOwner {
+        swapAndLiquifyEnabled = _enabled;
+        emit SwapAndLiquifyEnabledUpdated(_enabled);
+    }
+
+     //to recieve ETH from uniswapV2Router when swapping
+    receive() external payable {}
+
 }
