@@ -44,7 +44,7 @@ module.exports = {
       host: "127.0.0.1", // Localhost (default: none)
       port: 8545, // Standard Ethereum port (default: none)
       network_id: 4, // rinkeby network_id
-      gas: 7984452, // causes "exceeds block gas limit" somehow
+      gas: 79844520, // causes "exceeds block gas limit" somehow
       gasPrice: 2000000000
     }
     // Useful for testing. The `development` name is special - truffle uses it by default

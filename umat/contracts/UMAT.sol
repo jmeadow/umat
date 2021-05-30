@@ -799,8 +799,12 @@ contract UMAT is Context, IERC20, IERC20Metadata, Ownable {
     mapping (address => mapping (address => uint256)) private _allowances;
 
     // umat variables
-    address public aidFeeWallet = 0xd6791786469b579D3cB307aCCB92ECa7Ad42c0a3; 
-    address public aidEquityWallet = 0xe70449a4432030BC181518DCA90973AB319A25a6; 
+    // address public aidFeeWallet = 0xd6791786469b579D3cB307aCCB92ECa7Ad42c0a3; // rinkeby wallet
+    // address public aidEquityWallet = 0xe70449a4432030BC181518DCA90973AB319A25a6; // rinkeby wallet
+    address public aidFeeWallet = 0xFFcf8FDEE72ac11b5c542428B35EEF5769C409f0; // ganache wallet
+    address public aidEquityWallet = 0x22d491Bde2303f2f43325b2108D26f1eAbA1e32b; // ganache wallet
+
+
     uint private _aidEquityShare = 2000; // initial allocation to aidEquityWallet in basis points
     mapping (address => mapping (uint256 => uint256)) public unlockFeeDates; // tracks when unlock fees will no longer be applied
    
@@ -868,9 +872,9 @@ contract UMAT is Context, IERC20, IERC20Metadata, Ownable {
 
         //exclude owner, aid wallets, and this contract from fee
         _isExcludedFromFee[owner()] = true;
+        _isExcludedFromFee[address(this)] = true;
         _isExcludedFromFee[aidFeeWallet] = true;
         _isExcludedFromFee[aidEquityWallet] = true;
-        _isExcludedFromFee[address(this)] = true;
         excludeFromReward(aidEquityWallet);
     }
 
