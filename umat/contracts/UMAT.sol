@@ -795,7 +795,7 @@ contract UMAT is Context, IERC20, IERC20Metadata, Ownable {
     string private constant _name = "UMAT Token";
     string private constant _symbol = "UMAT v2.2";
     uint8 private constant _decimals = 18;
-    uint private _mintAmount = 10**6 * 10**18; // this is 1 million tokens + 18 decimals 
+    uint256 private _mintAmount = 10**6 * 10**18; // this is 1 million tokens + 18 decimals 
     mapping (address => mapping (address => uint256)) private _allowances;
 
     // umat variables
@@ -803,13 +803,10 @@ contract UMAT is Context, IERC20, IERC20Metadata, Ownable {
     // address public aidEquityWallet = 0xe70449a4432030BC181518DCA90973AB319A25a6; // rinkeby wallet
     address public aidFeeWallet = 0xFFcf8FDEE72ac11b5c542428B35EEF5769C409f0; // ganache wallet
     address public aidEquityWallet = 0x22d491Bde2303f2f43325b2108D26f1eAbA1e32b; // ganache wallet
-
-
-    uint private _aidEquityShare = 2000; // initial allocation to aidEquityWallet in basis points
-    mapping (address => mapping (uint256 => uint256)) public unlockFeeDates; // tracks when unlock fees will no longer be applied
+    uint16 private _aidEquityShare = 2000; // initial allocation to aidEquityWallet in basis points
    
     // reflection variables
-    uint public _tTotal;
+    uint256 public _tTotal;
     uint256 private _rTotal;
     uint256 private _tFeeTotal;
     uint256 private constant MAX = ~uint256(0); // the largest possible number?
@@ -820,13 +817,13 @@ contract UMAT is Context, IERC20, IERC20Metadata, Ownable {
     address[] private _excluded;
 
     // umat fees
-    uint public _aidRate = 500; // aid fee in basis points
-    uint public _reflectRate = 250; // reflect fee in basis points, equal to _taxFee in Safemoon
-    uint public _liquidityRate = 250; // liquidity fee in basis points
-    uint public _previousAidRate;
-    uint public _previousReflectRate;
-    uint public _previousLiquidityRate;
-    uint _transactionAidRate; // used within transactions to apply fee
+    uint16 public _aidRate = 500; // aid fee in basis points
+    uint16 public _reflectRate = 250; // reflect fee in basis points, equal to _taxFee in Safemoon
+    uint16 public _liquidityRate = 250; // liquidity fee in basis points
+    uint16 public _previousAidRate;
+    uint16 public _previousReflectRate;
+    uint16 public _previousLiquidityRate;
+    uint16 _transactionAidRate; // used within transactions to apply fee
 
     // uniswap variables
     IUniswapV2Router02 public immutable uniswapV2Router;
@@ -1098,15 +1095,15 @@ contract UMAT is Context, IERC20, IERC20Metadata, Ownable {
 
 
     // functions for altering contract-wide rates and amounts
-    function setReflectRate(uint256 reflectRate) external onlyOwner() {
+    function setReflectRate(uint16 reflectRate) external onlyOwner() {
         _reflectRate = reflectRate;
     }
     
-    function setLiquidityRate(uint256 liquidityRate) external onlyOwner() {
+    function setLiquidityRate(uint16 liquidityRate) external onlyOwner() {
         _liquidityRate = liquidityRate;
     }
   
-    function setAidRate(uint256 aidRate) external onlyOwner() {
+    function setAidRate(uint16 aidRate) external onlyOwner() {
         _aidRate = aidRate;
     }
 
@@ -1186,13 +1183,13 @@ contract UMAT is Context, IERC20, IERC20Metadata, Ownable {
         if(takeAid)
             addAidFee();
 
-        
-        if (_isExcluded[sender] && !_isExcluded[recipient]) {
+
+        if (!_isExcluded[sender] && !_isExcluded[recipient]) {
+            _transferStandard(sender, recipient, amount);
+        } else if (_isExcluded[sender] && !_isExcluded[recipient]) {
             _transferFromExcluded(sender, recipient, amount);
         } else if (!_isExcluded[sender] && _isExcluded[recipient]) {
             _transferToExcluded(sender, recipient, amount);
-        } else if (!_isExcluded[sender] && !_isExcluded[recipient]) {
-            _transferStandard(sender, recipient, amount);
         } else if (_isExcluded[sender] && _isExcluded[recipient]) {
             _transferBothExcluded(sender, recipient, amount);
         }
